@@ -1,0 +1,2 @@
+Case_Number,Street_Address_1,Street_Address_2,City,State,Zip_Code,County,Business_Address_Indicator,Parcel_ID,Census_Tract,Latitude,Longitude,Eviction_Filing_Date,Eviction_Judgment_Date,Judgment_For,Claim_Amount
+,1234 Main Street,,MyCity,FakeState,12345,mycounty,,,,1638367,875533,6/1/2019,,,

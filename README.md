@@ -20,7 +20,7 @@ geolocation data.
 5. In the command prompt, type in `docker pull dkemily/datakind-new-america-dev:new_housing_test` to pull the New Housing Tool
 6. In Docker Hub, click `Run`
 7. Under the `Volumes` tab, navigate to your data directory and add it to the `Host Path`
-8. Under the `Container Path` type in `/app`
+8. Under the `Container Path` type in `/data`
 9. Click `Run` to process your data
 
 ## Automated GitHub access

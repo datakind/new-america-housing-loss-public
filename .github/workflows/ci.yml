@@ -1,0 +1,18 @@
+name: oncompliance CI
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+
+jobs:
+  cli_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: cli-tests
+        working-directory: .
+        run: |
+          make requirements
+          make coverage
