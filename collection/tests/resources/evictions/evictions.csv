@@ -1,0 +1,2 @@
+Case_Number,street_address_1,City,State,Zip_Code,Parcel_ID,Census_Tract,Eviction_Filing_Date,Eviction_Judgement_Date,Judgement_For,Claim_Amount,Plaintiff_Name
+Case 1,123 Seasame Street,Tampa,Flordia,12345,MyParselID,MyCensusTractID,2021-01-01T00:00:00Z,2021-01-02T00:00:00Z,Plantiff,$1000000,Mr. Mock
