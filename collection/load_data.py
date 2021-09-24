@@ -650,5 +650,6 @@ if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
     )
+    print(f'Attempting to run against {sys.argv[1]}')
     dir_path = sys.argv[1]
     main(dir_path)
