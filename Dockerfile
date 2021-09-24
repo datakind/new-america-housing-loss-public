@@ -6,4 +6,4 @@ COPY . .
 
 RUN make requirements
 
-CMD ["python", "collection/load_data.py", "/data"]
+CMD ["python", "collection/load_data.py", "/app/data/"]

@@ -651,4 +651,5 @@ if __name__ == "__main__":
         level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
     )
     dir_path = sys.argv[1]
+    print(f'Attempting to run against {dir_path}')
     main(dir_path)
