@@ -5,26 +5,26 @@ foreclosure, and tax lien data and outputs statistical summaries and
 geolocation data. 
 
 ## Python CLI Usage Instructions
-1. Download Python: https://www.python.org/downloads/ and follow the instructions to install Python
+1. Download Python 3.8.10 here: https://www.python.org/downloads/release/python-3810/ and follow the instructions to install Python
 2. Navigate to the New America Housing Loss Tool here: https://github.com/datakind/new-america-housing-loss-public.git
 3. Click `Code` and `Download Zip` to download the code
 4. Unzip the zip file in your directory
 5. Open a terminal or a command prompt and navigate to where the code was downloaded, this directory end with `new-america-housing-loss-public-main`
-6. Type `pip install -r requirements.txt` to install the tool's dependencies
-7. Type `python collection/load_data.py /path/to/data` to run the tool against your data
+6. Run the following commands to install dependencies:
+   1. For Mac/Linux, run `python -m pip install -r requirements.txt`
+   2. For Windows, run `py -m pip install -r requirements.txt`
+7. Run the tool against your data:
+   1. For Mac/Linux, run `python collection/load_data.py /path/to/data/`
+   2. For Windows, run `py collection/load_data.py C:\path\to\data\`
 
 ## Docker Usage Instructions
 1. Navigate to the Docker Desktop website and install Docker here: https://docs.docker.com/get-docker/
 2. Click the installation link to install Docker for your Operating System
-3. Run the `Docker Desktop Installer` **as an administrator** with the default settings (installation will take several minutes) (administrative privileges are defined [here](https://forums.docker.com/t/solved-docker-failed-to-start-docker-desktop-for-windows/106976))
+3. Run the `Docker Desktop Installer` **as an administrator** with the default settings (installation will take several minutes)
 4. Click `Close and Restart` to complete the installation
 5. Open Docker and Accept the Terms of Service, Docker should now be successfully installed.
-6. `docker run dkemily/new-america-housing-loss-public:cli-tool -v .:/app/data`
-7. In the command prompt, type in `docker pull dkemily/new-america-housing-loss-public:cli-tool` to pull the New Housing Tool
-8. In Docker Hub, click `Run`
-9. Under the `Volumes` tab, navigate to your data directory and add it to the `Host Path`
-10. Under the `Container Path` type in `/app/data`
-11. Click `Run` to process your data
+6. Open a terminal (Mac/Unix) or command prompt (Windows)
+7. `docker run -v "/path/to/data":/app/data dkemily/new-america-housing-loss-public:cli-tool` (where `/path/to/data` is the path to your directory)
 
 ## Automated GitHub access
 
