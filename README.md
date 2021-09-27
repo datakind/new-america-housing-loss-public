@@ -26,7 +26,8 @@ geolocation data.
 5. Click `Close and Restart` to complete the installation
 6. Open Docker and Accept the Terms of Service, Docker should now be successfully installed.
 7. Open a terminal (Mac/Unix) or command prompt (Windows)
-8. `docker run -v "/path/to/data":/app/data dkemily/new-america-housing-loss-public:cli-tool` (where `/path/to/data` is the absolute path to your directory)
+8. Run the command `docker -v` to ensure Docker is installed correctly
+9. `docker run -v "/path/to/data":/app/data dkemily/new-america-housing-loss-public:cli-tool` (where `/path/to/data` is the absolute path to your directory)
    1. In Mac/Linux, you will use a command similar to `docker run -v "/Users/my_user/data/test":/app/data dkemily/new-america-housing-loss-public:cli-tool`
    2. In Windows, you will use a command similar to `docker run -v "C:\path\to\data":/app/data dkemily/new-america-housing-loss-public:cli-tool`
 
