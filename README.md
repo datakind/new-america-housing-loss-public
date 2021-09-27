@@ -4,6 +4,19 @@ A Command Line Interface (CLI) that allows users to ingest eviction,
 foreclosure, and tax lien data and outputs statistical summaries and 
 geolocation data. 
 
+## Docker Usage Instructions
+1. Ensure your data format is configured based on the specification in this [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true)
+2. Navigate to the Docker Desktop website and install Docker here: https://docs.docker.com/get-docker/
+3. Click the installation link to install Docker for your Operating System
+4. Run the `Docker Desktop Installer` **as an administrator** with the default settings (installation will take several minutes)
+5. Click `Close and Restart` to complete the installation
+6. Open Docker and Accept the Terms of Service, Docker should now be successfully installed.
+7. Open a terminal (Mac/Unix) or command prompt (Windows)
+8. Run the command `docker -v` to ensure Docker is installed correctly
+9. `docker run -v "/path/to/data":/app/data dkemily/new-america-housing-loss-public:cli-tool` (where `/path/to/data` is the absolute path to your directory)
+   1. In Mac/Linux, you will use a command similar to `docker run -v "/Users/my_user/data/test":/app/data dkemily/new-america-housing-loss-public:cli-tool`
+   2. In Windows, you will use a command similar to `docker run -v "C:\path\to\data":/app/data dkemily/new-america-housing-loss-public:cli-tool`
+
 ## Python CLI Usage Instructions
 1. Ensure your data format is configured based on the specification in this [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true)
 2. Download Python 3.8.10 here: https://www.python.org/downloads/release/python-3810/ and follow the instructions to install Python
@@ -17,19 +30,6 @@ geolocation data.
 8. Run the tool against your data:
    1. For Mac/Linux, run `python collection/load_data.py /path/to/data/`
    2. For Windows, run `py collection/load_data.py C:\path\to\data\`
-
-## Docker Usage Instructions
-1. Ensure your data format is configured based on the specification in this [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true)
-2. Navigate to the Docker Desktop website and install Docker here: https://docs.docker.com/get-docker/
-3. Click the installation link to install Docker for your Operating System
-4. Run the `Docker Desktop Installer` **as an administrator** with the default settings (installation will take several minutes)
-5. Click `Close and Restart` to complete the installation
-6. Open Docker and Accept the Terms of Service, Docker should now be successfully installed.
-7. Open a terminal (Mac/Unix) or command prompt (Windows)
-8. Run the command `docker -v` to ensure Docker is installed correctly
-9. `docker run -v "/path/to/data":/app/data dkemily/new-america-housing-loss-public:cli-tool` (where `/path/to/data` is the absolute path to your directory)
-   1. In Mac/Linux, you will use a command similar to `docker run -v "/Users/my_user/data/test":/app/data dkemily/new-america-housing-loss-public:cli-tool`
-   2. In Windows, you will use a command similar to `docker run -v "C:\path\to\data":/app/data dkemily/new-america-housing-loss-public:cli-tool`
 
 ## Automated GitHub access
 
