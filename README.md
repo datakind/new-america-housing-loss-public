@@ -28,7 +28,7 @@ geolocation data.
 7. Open a terminal (Mac/Unix) or command prompt (Windows)
 8. `docker run -v "/path/to/data":/app/data dkemily/new-america-housing-loss-public:cli-tool` (where `/path/to/data` is the absolute path to your directory)
    1. In Mac/Linux, you will use a command similar to `docker run -v "/Users/my_user/data/test":/app/data dkemily/new-america-housing-loss-public:cli-tool`
-   2. In Windows, you will use a command similar to `docker run -v "C:\\path\to\data":/app/data dkemily/new-america-housing-loss-public:cli-tool`
+   2. In Windows, you will use a command similar to `docker run -v "C:\path\to\data":/app/data dkemily/new-america-housing-loss-public:cli-tool`
 
 ## Automated GitHub access
 
