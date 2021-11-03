@@ -1,4 +1,4 @@
-name: oncompliance CI
+name: DataKind New Americal Housing Tool CI
 on:
   push:
     branches:
