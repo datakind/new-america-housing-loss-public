@@ -1,4 +1,4 @@
-name: DataKind New Americal Housing Tool CI
+name: DataKind New America Housing Tool CI
 on:
   push:
     branches:
