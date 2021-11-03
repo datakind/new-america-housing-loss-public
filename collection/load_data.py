@@ -23,7 +23,7 @@ MAX_YEAR = 2021
 
 
 # HELPER FUNCTIONS
-def remove_special_chars(text):
+def remove_special_chars(text: str):
     """Remove special characters from text
     Inputs
     ------
@@ -32,6 +32,9 @@ def remove_special_chars(text):
     -------
     text: a clean string with no special characters
     """
+    if not isinstance(text, str):
+        print('Non-string text identified, setting field to empty string')
+        return ''
     for special_chars in [
         '\\',
         '`',
