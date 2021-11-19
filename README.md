@@ -27,7 +27,7 @@ geolocation data.
     1. The `analysis_plots` directory contains time series and correlation analysis of your content
     2. The `data_summaries` directory contains a summary of evictions/foreclosures by geocode
     3. The `full_datasets` directory contains all eviction/foreclosure records enriched with Census' American Community Survey (ACS) data
-    4. The `mapping_data` directory contains a geojson file that can be examined using QGIS
+    4. The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
 
 ## Structure
 
