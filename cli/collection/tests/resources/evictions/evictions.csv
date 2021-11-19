@@ -1,0 +1,6 @@
+Case_Number,Street_Address_1,Street_Address_2,City,State,Zip_Code,County,Business_Address_Indicator,Parcel_ID,GEOID,Latitude,Longitude,Eviction_Filing_Date,Eviction_Judgement_Date,Judgement_For,Claim_Amount
+Case 1,1204 E Patrick St,,Frederick,MD,21701,Frederick,,,,39.4141,77.4101,2021-01-01,2021-01-02,Plantiff,"$1,000,000"
+Case 2,423 S Jefferson St,,Frederick,MD,21701,Frederick,,,,39.4142,77.4102,2021-01-02,2021-01-03,Plantiff,"$2,000,000"
+Case 3,1201 E Patrick St,,Frederick,MD,21701,Frederick,,,,39.4143,77.4103,2021-01-03,2021-01-04,Plantiff,"$3,000,000"
+Case 4,1203 W Patrick St,,Frederick,MD,21702,Frederick,,,,,,2021-01-04,2021-01-05,Plantiff,"$4,000,000"
+Case 5,1086 W Patrick St,,Frederick,MD,21703,Frederick,,,,,,2021-01-05,2021-01-06,Plantiff,"$5,000,000"
