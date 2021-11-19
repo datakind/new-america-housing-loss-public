@@ -214,9 +214,15 @@ def plot_acs_correlations(
     f, ax = plt.subplots()
     corr_plt = sns.regplot(x=x_var, y=y_var, data=df).set_title(title_string)
     figure = corr_plt.get_figure()
-    figure.savefig(
-        str(plot_write_path / OUTPUT_PATH_PLOTS_DETAIL / file_string), dpi=200
-    )
+    try:
+        figure.savefig(
+            str(plot_write_path / OUTPUT_PATH_PLOTS_DETAIL / file_string), dpi=200
+        )
+    except FileNotFoundError:
+        print(
+            'Error: The absolute file path is too long for Python to save this file. '
+            'Please shorten the file path to your data directory'
+        )
     plt.close()
 
 
@@ -234,8 +240,8 @@ def correlation_analysis(
     to_keep = ['geoid', target_var]
     processed_data_df = processed_data_df[to_keep]
     processed_data_df = processed_data_df[processed_data_df['geoid'].notna()]
-    processed_data_df.geoid = processed_data_df.geoid.astype(int)
-    census_df.GEOID = census_df.GEOID.astype(int)
+    processed_data_df.geoid = processed_data_df.geoid.astype(str)
+    census_df.GEOID = census_df.GEOID.astype(str)
 
     mrg = processed_data_df.merge(census_df, left_on='geoid', right_on='GEOID')
 

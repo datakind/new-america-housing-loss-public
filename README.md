@@ -12,12 +12,15 @@ geolocation data.
 5. Unzip the zip file in the directory of your choice
 6. Open a terminal or a command prompt and navigate to where the code was downloaded (note: this directory will end with `new-america-housing-loss-public-main`)
 7. Change directory to the `cli` using the command `cd cli` 
-8. Run the following commands to install dependencies:
+8. If you are running Windows, you will need to run the following commands to install dependencies:
+   1. `py -m pip install whl/GDAL-3.3.3-cp38-cp38-win_amd64.whl`
+   2. `py -m pip install whl/Fiona-1.8.20-cp38-cp38-win_amd64.whl`
+9. Run the following commands to install dependencies:
    1. For Mac/Linux, run `python -m pip install -r requirements.txt`
    2. For Windows, run `py -m pip install -r requirements.txt`
-9. Run the tool against your data:
-   1. For Mac/Linux, run `python load_data.py /path/to/data/`
-   2. For Windows, run `py load_data.py C:\path\to\data\`
+10. Run the tool against your data:
+    1. For Mac/Linux, run `python load_data.py /path/to/data/`
+    2. For Windows, run `py load_data.py C:\path\to\data\`
 
 ## Structure
 
