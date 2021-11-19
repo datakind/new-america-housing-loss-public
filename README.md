@@ -21,12 +21,12 @@ geolocation data.
    1. For Mac/Linux, run `python -m pip install -r requirements.txt`
    2. For Windows, run `py -m pip install -r requirements.txt`
 10. Run the tool against your data:
-    1. For Mac/Linux, run `python load_data.py /path/to/data/`
-    2. For Windows, run `py load_data.py C:\path\to\data\`
+    1. For Mac/Linux, run `python load_data.py /path/to/input_data/`
+    2. For Windows, run `py load_data.py C:\path\to\input_data\`
 11. The output will be available one level up from your data directory in a folder called `output_data`
     1. The `analysis_plots` directory contains time series and correlation analysis of your content
-    2. The `data_summaries` directory contains a summary of evictions/foreclosures by geocode
-    3. The `full_datasets` directory contains all eviction/foreclosure records enriched with Census' American Community Survey (ACS) data
+    2. The `data_summaries` directory contains a summary of evictions/foreclosures by geocode (enriched with American Community Survey (ACS) data)
+    3. The `full_datasets` directory contains all eviction/foreclosure geocoded records
     4. The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
 
 ## Structure
