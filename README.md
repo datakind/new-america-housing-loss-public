@@ -11,12 +11,13 @@ geolocation data.
 4. Click `Code` and `Download Zip` to download the code
 5. Unzip the zip file in the directory of your choice
 6. Open a terminal or a command prompt and navigate to where the code was downloaded (note: this directory will end with `new-america-housing-loss-public-main`)
-7. Run the following commands to install dependencies:
+7. Change directory to the `cli` using the command `cd cli` 
+8. Run the following commands to install dependencies:
    1. For Mac/Linux, run `python -m pip install -r requirements.txt`
    2. For Windows, run `py -m pip install -r requirements.txt`
-8. Run the tool against your data:
-   1. For Mac/Linux, run `python collection/load_data.py /path/to/data/`
-   2. For Windows, run `py collection/load_data.py C:\path\to\data\`
+9. Run the tool against your data:
+   1. For Mac/Linux, run `python load_data.py /path/to/data/`
+   2. For Windows, run `py load_data.py C:\path\to\data\`
 
 ## Structure
 

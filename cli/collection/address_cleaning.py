@@ -15,7 +15,7 @@ def remove_special_chars(text: str) -> str:
     """
     if not isinstance(text, str):
         print('Non-string text identified, setting field to empty string')
-        return ''
+        return str(text)
 
     for special_chars in [
         '\\',
