@@ -5,7 +5,9 @@ foreclosure, and tax lien data and outputs statistical summaries and
 geolocation data. 
 
 ## Python CLI Usage Instructions
-1. Ensure your data format is configured based on the specification in this [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true)
+1. Ensure your data format is configured based on the required specification 
+   1. This [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true) presents the data requirements
+   2. This [Example Directory](https://github.com/datakind/new-america-housing-loss-public/tree/main/cli/collection/tests/resources) shows a populated version of the format with random addresses
 2. Download Python 3.8.10 here: https://www.python.org/downloads/release/python-3810/ and follow the instructions to install Python
 3. Navigate to the New America Housing Loss Tool here: https://github.com/datakind/new-america-housing-loss-public.git
 4. Click `Code` and `Download Zip` to download the code
@@ -21,6 +23,11 @@ geolocation data.
 10. Run the tool against your data:
     1. For Mac/Linux, run `python load_data.py /path/to/data/`
     2. For Windows, run `py load_data.py C:\path\to\data\`
+11. The output will be available one level up from your data directory in a folder called `output_data`
+    1. An `analysis_plots` directory contains time series and correlation analysis of your content
+    2. A `data_summaries` directory contains a summary of evictions/foreclosures by geocode
+    3. The `full_datasets` directory contains all eviction/foreclosure records enriched with Census' American Community Survey (ACS) data
+    4. The `mapping_data` directory contains a geojson file that can be examined using QGIS
 
 ## Structure
 
