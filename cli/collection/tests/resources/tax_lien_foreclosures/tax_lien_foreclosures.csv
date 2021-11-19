@@ -1,0 +1,6 @@
+﻿Case_Number,Street_Address_1,Street_Address_2,City,State,Zip_Code,County,Business_Address_Indicator,Parcel_ID,GEOID,Latitude,Longitude,Tax_Lien_Sale_Date,Tax_Lien_Amount_Due
+Case 1,1204 E Patrick St,,Frederick,MD,21701,Frederick,,,,39.4141,77.4101,1/1/21,"$1,000,000"
+Case 2,423 S Jefferson St,,Frederick,MD,21701,Frederick,,,,39.4142,77.4102,1/2/21,"$2,000,000"
+Case 3,1201 E Patrick St,,Frederick,MD,21701,Frederick,,,,39.4143,77.4103,1/3/21,"$3,000,000"
+Case 4,1203 W Patrick St,,Frederick,MD,21702,Frederick,,,,,,1/4/21,"$4,000,000"
+Case 5,1086 W Patrick St,,Frederick,MD,21703,Frederick,,,,,,1/5/21,"$5,000,000"

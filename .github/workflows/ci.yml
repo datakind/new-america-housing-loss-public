@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: cli-tests
-        working-directory: .
+        working-directory: ./cli
         run: |
           make requirements
-          make coverage
+          make pytest
