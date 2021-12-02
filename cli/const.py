@@ -58,7 +58,7 @@ OUTPUT_FORECLOSURE_PLOTS = 'output_data/analysis_plots/correlations_foreclosure_
 OUTPUT_PATH_SUMMARIES = 'output_data/data_summaries/'
 OUTPUT_PATH_MAPS = 'output_data/mapping_data/'
 
-GEOCODED_EVICTIONS_FILENAME = 'evictons_data_geocoded.csv'
+GEOCODED_EVICTIONS_FILENAME = 'evictions_data_geocoded.csv'
 GEOCODED_FORECLOSURES_FILENAME = 'foreclosures_data_geocoded.csv'
 GEOCODED_TAX_LIENS_FILENAME = 'tax_liens_data_geocoded.csv'
 HOUSING_LOSS_TIMESERIES_FILENAME = 'housing_loss_timeseries.png'

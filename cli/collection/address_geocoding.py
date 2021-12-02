@@ -304,6 +304,11 @@ def geocode_input_data(
     # If a geoid column is available, just return the df as is
     if 'geoid' in df_avail_cols:
         output_geocoded_df = input_df.copy()
+        # However, standardize geoid column first to avoid merge issues later
+        output_geocoded_df['geoid'] = [
+            str(int(x)).zfill(11) if pd.notna(x) else ''
+            for x in output_geocoded_df['geoid']
+        ]
     # If a street address is available, use the census geocoder to geocode
     elif 'street_address_1' in df_avail_cols:
         print(f'\nStarting geocoding of {data_type} data...')
