@@ -10,7 +10,6 @@ import typing as T
 from functools import reduce
 from pathlib import Path
 
-import geopandas
 import pandas as pd
 import requests
 from matplotlib import collections
