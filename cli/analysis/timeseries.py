@@ -5,7 +5,10 @@ import pandas as pd
 from matplotlib import collections
 from matplotlib import pyplot as plt
 
+from cli.loggy import log_machine
 
+
+@log_machine
 def create_timeseries(
     input_df: pd.DataFrame, date_column: str, series_label: str
 ) -> T.Union[T.Tuple[collections.PathCollection, str], T.Tuple[None, None]]:

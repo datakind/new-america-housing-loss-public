@@ -6,6 +6,7 @@ Created on Sat Sep 18 23:11:22 2021
 import logging
 import os
 import sys
+import yaml
 import typing as T
 from functools import reduce
 from pathlib import Path
@@ -54,7 +55,13 @@ from const import (
     TRACT_BOUNDARY_FILENAME,
 )
 
+from timer import Timer
 
+from loggy import setup_logger
+from loggy import log_machine
+
+
+@log_machine
 def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     """Load evictions data from csv template
     Inputs
@@ -246,6 +253,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     return None
 
 
+@log_machine
 def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
     """Simple helper function to write a dataframe to disk."""
     # Check for empty input
@@ -257,11 +265,26 @@ def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
     input_df.to_csv(str(write_path_filename), index=False)
 
 
+@log_machine
+def read_config(file_path):
+    """
+    :param file_path:
+    :return: cfg, loaded yaml file
+    """
+
+    with open(file_path, "r") as f:
+        cfg = yaml.safe_load(f)
+
+    return cfg
+
+
+@log_machine
 def main(input_path: str) -> None:
     """This function is what it says it is. :)
 
     It takes in the input data path as an argument
     """
+
     # LOOK FOR CORRECT SUBDIRECTORY STRUCTURE
     sub_directories = verify_input_directory(input_path)
     # If the input_directory fails, the main function should abort:
@@ -302,9 +325,11 @@ def main(input_path: str) -> None:
         df_mort_standardized, 'foreclosure_sale_date', 'Foreclosures'
     )
     fig3 = create_timeseries(df_tax_standardized, 'tax_lien_sale_date', 'Tax_Liens')
+
     # Create the directories to output the plots to
     plot_write_path = Path(input_path).parent / OUTPUT_PATH_PLOTS
     plot_write_path.mkdir(parents=True, exist_ok=True)
+
     # Save the plots to this directory
     plt.legend(prop={'size': 20})
     plt.savefig(str(plot_write_path / HOUSING_LOSS_TIMESERIES_FILENAME))
@@ -556,8 +581,19 @@ def main(input_path: str) -> None:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
-    )
+
+    logger = setup_logger()
+    logger.critical('start')
+
+#    config = read_config("config.yaml")
+
     dir_path = sys.argv[1]
+
+    tic = Timer()
+    tic.start()
+
     main(dir_path)
+
+    main_time = tic.stop()
+    logger_msg = ' overall execution time = %.2f' % main_time
+    logger.critical('complete' + logger_msg)

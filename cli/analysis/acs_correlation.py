@@ -10,7 +10,8 @@ import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 
-from const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
+from cli.const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
+from cli.loggy import log_machine
 
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
@@ -18,7 +19,7 @@ pd.options.mode.chained_assignment = None
 sig_results = {}
 all_results = {}
 
-
+@log_machine
 def get_acs_vars_for_analysis() -> T.List:
 
     """Function to identify/grab which ACS variables
@@ -102,6 +103,7 @@ def get_acs_vars_for_analysis() -> T.List:
     return vars
 
 
+@log_machine
 def calc_acs_correlations(df: pd.DataFrame, x_var: str, y_var: str):
 
     """Function to calculate correlations.
@@ -148,6 +150,7 @@ def calc_acs_correlations(df: pd.DataFrame, x_var: str, y_var: str):
     return corr
 
 
+@log_machine
 def plot_acs_correlations(
     df: pd.DataFrame, x_var: str, y_var: str, plot_write_path: str
 ) -> None:
@@ -226,6 +229,7 @@ def plot_acs_correlations(
     plt.close()
 
 
+@log_machine
 def correlation_analysis(
     census_df: pd.DataFrame,
     processed_data_df: pd.DataFrame,

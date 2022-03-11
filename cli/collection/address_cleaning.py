@@ -3,7 +3,9 @@ import typing as T
 import numpy as np
 import pandas as pd
 
+from cli.loggy import log_machine
 
+@log_machine
 def remove_special_chars(text: str) -> str:
     """Remove special characters from text
     Inputs
@@ -47,6 +49,7 @@ def remove_special_chars(text: str) -> str:
     return text
 
 
+@log_machine
 def get_zipcode5(raw_zipcode: T.Union[int, float, str, None]) -> T.Union[str, None]:
     """Clean up the zip code to convert it to 5-character strings."""
     if pd.isna(raw_zipcode):

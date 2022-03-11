@@ -6,6 +6,8 @@ import typing as T
 import censusdata
 import pandas as pd
 
+from cli.loggy import log_machine
+
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
 
@@ -16,6 +18,7 @@ sig_results = {}
 all_results = {}
 
 
+@log_machine
 def load_census_data(census_raw_data: pd.DataFrame) -> pd.DataFrame:
     """Load the ACS data and generate relevant columns.
 
@@ -141,6 +144,7 @@ def load_census_data(census_raw_data: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+@log_machine
 def censusgeo2fips(cg: censusdata.censusgeo) -> str:
     """Helper function to convert a CensusData geography object into a FIPS code string.
 
@@ -158,6 +162,7 @@ def censusgeo2fips(cg: censusdata.censusgeo) -> str:
     return f"{param_dict['state']}{param_dict['county']}{param_dict.get('tract', '')}"
 
 
+@log_machine
 def fetch_metadata(
     source: str, year: int, tablenames: T.List, variable_subset: T.List = None
 ) -> T.Dict:
@@ -189,6 +194,7 @@ def fetch_metadata(
     return variables_dict
 
 
+@log_machine
 def fetch_data(
     source: str,
     year: int,
@@ -230,6 +236,7 @@ def fetch_data(
     )
 
 
+@log_machine
 def get_region_geo(state_id: str, county_id: str) -> censusdata.censusgeo:
     """Creates the appropriate Census Geography object for each FPR study region.
 
@@ -251,6 +258,7 @@ def get_region_geo(state_id: str, county_id: str) -> censusdata.censusgeo:
     return geo
 
 
+@log_machine
 def get_data_for_region(
     state_id: str,
     county_id: str,
@@ -321,6 +329,7 @@ def get_data_for_region(
     return all_data, data_dictionary
 
 
+@log_machine
 def get_acs_data(
     state_fips: str, county_fips: str, year: int = 2019
 ) -> T.Union[T.Tuple[pd.DataFrame, T.Dict], T.Tuple[None, None]]:

@@ -4,11 +4,14 @@ from pathlib import Path
 import pandas as pd
 import scourgify
 
-from collection.address_cleaning import get_zipcode5
-from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
+from cli.collection.address_cleaning import get_zipcode5
+from cli.const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
+from cli.loggy import log_machine
 
 
 # Requires input_path
+
+@log_machine
 def verify_input_directory(input_path: str) -> T.List:
     """Parse the command line input and determine a directory path."""
     directory_contents = [x for x in Path(input_path).iterdir()]
@@ -33,6 +36,7 @@ def verify_input_directory(input_path: str) -> T.List:
     return [Path(input_path) / sd for sd in sub_directories]
 
 
+@log_machine
 def search_dataframe_column(
     df_to_search: pd.DataFrame, col_to_find: str, alt_col_name: str
 ) -> T.Tuple[bool, T.Union[str, None]]:
@@ -73,6 +77,7 @@ def search_dataframe_column(
     return found_column, use_alt_column
 
 
+@log_machine
 def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     """Validates and cleans the address data
     Creates indicator variables to assign GEOIDs
@@ -178,6 +183,7 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     return data, columns_to_return
 
 
+@log_machine
 def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
     """Given an address string, return a dict of standardized address tags.
 
@@ -202,6 +208,7 @@ def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
         return None
 
 
+@log_machine
 def standardize_input_addresses(
     input_df: pd.DataFrame, data_type: str
 ) -> T.Union[T.Tuple[pd.DataFrame, list], T.Tuple[None, None]]:

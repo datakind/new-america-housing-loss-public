@@ -15,7 +15,7 @@ import requests
 from tqdm import tqdm
 
 # Global Variables
-from const import (
+from cli.const import (
     GEOCODE_CACHE_SIZE,
     GEOCODE_CHUNK_SIZE,
     GEOCODE_PAYLOAD,
@@ -29,9 +29,11 @@ from const import (
 
 np.random.seed(RANDOM_SEED)
 
-from collection.address_cleaning import get_zipcode5
+from cli.collection.address_cleaning import get_zipcode5
+from cli.loggy import log_machine
 
 
+@log_machine
 def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, None]:
     """Given an input dataframe of clean addresses, format it to match Census batch geocoder specs."""
     # Check for empty input
@@ -74,6 +76,7 @@ def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, N
     return df_geocode_cols
 
 
+@log_machine
 def generate_geocode_chunks(df_geocode_cols: pd.DataFrame) -> pd.DataFrame:
     """Generate chunks of large files already formatted for the Census batch geocoder API"""
     full_row_count = len(df_geocode_cols)
@@ -89,6 +92,7 @@ def generate_geocode_chunks(df_geocode_cols: pd.DataFrame) -> pd.DataFrame:
         chunk_start_row += GEOCODE_CHUNK_SIZE
 
 
+@log_machine
 def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     """Geocode a given chunk of data using the census batch geocoding API
 
@@ -114,6 +118,7 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     return geocoded_df
 
 
+@log_machine
 def census_geocode_full_dataset(
     input_df: pd.DataFrame, data_type: str, cache_filepath: str
 ) -> T.Union[pd.DataFrame, None]:
@@ -170,6 +175,7 @@ def census_geocode_full_dataset(
     return output_df
 
 
+@log_machine
 def append_census_geocode_data(
     address_df: pd.DataFrame, data_type: str, cache_filepath: str
 ) -> T.Union[pd.DataFrame, None]:
@@ -214,6 +220,7 @@ def append_census_geocode_data(
     return output_geocoded_df, success_record_count
 
 
+@log_machine
 def zip_to_tract_lookup(zipcode: str, data_year: int = 2020) -> str:
     """Determine (probabilistically) the census tract for a given zipcode.
     Inputs
@@ -258,6 +265,7 @@ def zip_to_tract_lookup(zipcode: str, data_year: int = 2020) -> str:
             return result["geoid"]
 
 
+@log_machine
 def append_zip_to_tract_data(
     addr_geocode_df: pd.DataFrame,
 ) -> T.Union[pd.DataFrame, None]:
@@ -292,6 +300,7 @@ def append_zip_to_tract_data(
     return output_geocoded_df, success_record_count
 
 
+@log_machine
 def geocode_input_data(
     input_df: pd.DataFrame, df_avail_cols: T.List, data_type: str, cache_filepath: str
 ) -> T.Union[pd.DataFrame, None]:
@@ -352,6 +361,7 @@ def geocode_input_data(
     return output_geocoded_df
 
 
+@log_machine
 def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, str]:
     """Given a geocoded dataframe, determine the most likely state, county and city from it."""
     # Check for empty dataframe
