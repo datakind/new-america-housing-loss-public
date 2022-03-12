@@ -6,7 +6,7 @@ import typing as T
 import censusdata
 import pandas as pd
 
-from cli.loggy import log_machine
+from loggy import log_machine
 
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
@@ -185,24 +185,28 @@ def fetch_metadata(
     dict
         A dictionary of {variable: {metadata_fields}}
     """
+
     variables_dict = {}
+
     for t in tablenames:
         dt = censusdata.censustable(source, year, t)
+
         for v in dt.keys():
             if variable_subset == None or v in variable_subset:
                 variables_dict[v] = dt[v]
+
     return variables_dict
 
 
 @log_machine
 def fetch_data(
-    source: str,
-    year: int,
-    geo: censusdata.censusgeo,
-    variables_dict: T.Dict,
-    table_type: str,
-    api_key: str,
-) -> pd.DataFrame:
+                source: str,
+                year: int,
+                geo: censusdata.censusgeo,
+                variables_dict: T.Dict,
+                table_type: str,
+                api_key: str,
+                ) -> pd.DataFrame:
     """Fetches data from Census Bureau API on a list of variables,
     and returns a Pandas DataFrame.
 
@@ -226,14 +230,17 @@ def fetch_data(
     Pandas DataFrame
         Variables as columns, geography as rows
     """
-    return censusdata.download(
-        source,
-        year,
-        geo,
-        [v for v in variables_dict.keys()],
-        tabletype=table_type,
-        key=api_key,
-    )
+
+    df_census = censusdata.download(
+                                source,
+                                year,
+                                geo,
+                                [v for v in variables_dict.keys()],
+                                tabletype=table_type,
+                                key=api_key,
+                            )
+
+    return df_census
 
 
 @log_machine
@@ -260,15 +267,15 @@ def get_region_geo(state_id: str, county_id: str) -> censusdata.censusgeo:
 
 @log_machine
 def get_data_for_region(
-    state_id: str,
-    county_id: str,
-    source: str,
-    year: int,
-    dataprofile_tables: T.List = None,
-    subject_tables: T.List = None,
-    detail_tables: T.List = None,
-    dataprofile_filter: T.List = [],
-) -> T.Tuple:
+                        state_id: str,
+                        county_id: str,
+                        source: str,
+                        year: int,
+                        dataprofile_tables: T.List = None,
+                        subject_tables: T.List = None,
+                        detail_tables: T.List = None,
+                        dataprofile_filter: T.List = [],
+                        ) -> T.Tuple:
     """Creates data and data dictionary from Census API for a region.
 
     Parameters:
@@ -293,33 +300,31 @@ def get_data_for_region(
     tuple
         (DataFrame, dict) -> the data and data dictionary respectively
     """
+
     geo = get_region_geo(state_id, county_id)
     data_dictionary = {}
     retrieved_data = []
 
     if dataprofile_tables != None:
-        dataprofile_variables = fetch_metadata(
-            source, year, dataprofile_tables, variable_subset=dataprofile_filter
-        )
-        retrieved_data.append(
-            fetch_data(
-                source, year, geo, dataprofile_variables, "profile", CENSUS_API_KEY
-            )
-        )
+        dataprofile_variables = fetch_metadata(source,
+                                               year,
+                                               dataprofile_tables,
+                                               variable_subset=dataprofile_filter)
+        retrieved_data.append(fetch_data(source,
+                                         year,
+                                         geo,
+                                         dataprofile_variables, "profile", CENSUS_API_KEY)
+                                )
         data_dictionary.update(dataprofile_variables)
 
     if subject_tables != None:
         subject_variables = fetch_metadata(source, year, subject_tables)
-        retrieved_data.append(
-            fetch_data(source, year, geo, subject_variables, "subject", CENSUS_API_KEY)
-        )
+        retrieved_data.append(fetch_data(source, year, geo, subject_variables, "subject", CENSUS_API_KEY))
         data_dictionary.update(subject_variables)
 
     if detail_tables != None:
         detail_variables = fetch_metadata(source, year, detail_tables)
-        retrieved_data.append(
-            fetch_data(source, year, geo, detail_variables, "detail", CENSUS_API_KEY)
-        )
+        retrieved_data.append(fetch_data(source, year, geo, detail_variables, "detail", CENSUS_API_KEY))
         data_dictionary.update(detail_variables)
 
     # Combine data into a single DataFrame
@@ -330,10 +335,10 @@ def get_data_for_region(
 
 
 @log_machine
-def get_acs_data(
-    state_fips: str, county_fips: str, year: int = 2019
-) -> T.Union[T.Tuple[pd.DataFrame, T.Dict], T.Tuple[None, None]]:
+def get_acs_data(state_fips: str, county_fips: str, year: int = 2019) \
+                -> T.Union[T.Tuple[pd.DataFrame, T.Dict], T.Tuple[None, None]]:
     """Main function to get ACS data from the census API."""
+
     if state_fips is None or county_fips is None:
         return (None, None)
 

@@ -45,17 +45,18 @@ def log_machine(f):
 
         # start message to log file
         logger = logging.getLogger(__name__)
-        log_message = ('%s | start' % f.__name__)
+        log_message = ('%s | start |' % f.__name__)
         logger.info(log_message)
 
         # execute the called function
         returned_objs = f(*args, **kwargs)
 
         # stop the timer, log exit
-        log_message = ('%s | complete | %.2f sec' % (f.__name__, t.stop()))
+        log_message = ('%s | complete | %.2f' % (f.__name__, t.stop()))
         logger.info(log_message)
 
         # return control to calling function
         return returned_objs
 
     return wrapper
+

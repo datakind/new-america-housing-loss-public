@@ -1,39 +1,63 @@
+
+
+import logging
 import typing as T
 from pathlib import Path
 
 import pandas as pd
 import scourgify
 
-from cli.collection.address_cleaning import get_zipcode5
-from cli.const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
-from cli.loggy import log_machine
+from collection.address_cleaning import get_zipcode5
+from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
+from loggy import log_machine
 
 
 # Requires input_path
 
+from pathlib import PurePath
+
 @log_machine
 def verify_input_directory(input_path: str) -> T.List:
     """Parse the command line input and determine a directory path."""
+
+    logger = logging.getLogger(__name__)
+
     directory_contents = [x for x in Path(input_path).iterdir()]
-    sub_directories = set(
-        [
-            str(f).replace(input_path, '').lower()
-            for f in directory_contents
-            if f.is_dir()
-        ]
-    )
+
+    # base code - not robust to / inclusion or exclusion in dir_path setting
+    # comment out and replace with subsequent method using PurePath
+    # sub_directories = set(
+    #     [
+    #         str(f).replace(input_path, '').lower()
+    #         for f in directory_contents
+    #         if f.is_dir()
+    #     ]
+    # )
+
+    # more robust method to split directory names
+    sub_directories = set([PurePath(f).parts[-1] for f in directory_contents if f.is_dir()])
+
 
     if len(directory_contents) == 0:
         print('\u2326  Directory is empty!')
-        return None
+        logger.critical('directory is empty')
+        return []
+
     if len(sub_directories) == 0:
         print('\u2326  No sub-directories present in input directory')
-        return None
+        logger.critical('no sub-directories found in input directory')
+        return []
+
     if len(sub_directories.intersection(REQUIRED_SUB_DIRECTORIES)) == 0:
         print('\u2326  Required sub-directories missing from input directory')
-        return None
+        logger.critical('required sub-sirectories missing from input directory')
+        return []
+
     print('\u2713  Required sub-directories found in input directory!')
-    return [Path(input_path) / sd for sd in sub_directories]
+
+    ls_input_dirs = [Path(input_path) / sd for sd in sub_directories]
+
+    return ls_input_dirs
 
 
 @log_machine

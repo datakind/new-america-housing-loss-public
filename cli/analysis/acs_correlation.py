@@ -10,8 +10,8 @@ import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 
-from cli.const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
-from cli.loggy import log_machine
+from const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
+from loggy import log_machine
 
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
@@ -303,7 +303,7 @@ def correlation_analysis(
 
     print('Summarizing all analysis results...')
 
-    ### Contextualize results with previous partner site data
+    # Contextualize results with previous partner site data
 
     ###  Load previous site data.  unfortunately currently pulling from two
     ###  files (same data but different indices) due to a particularity

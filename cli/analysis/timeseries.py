@@ -5,7 +5,7 @@ import pandas as pd
 from matplotlib import collections
 from matplotlib import pyplot as plt
 
-from cli.loggy import log_machine
+from loggy import log_machine
 
 
 @log_machine

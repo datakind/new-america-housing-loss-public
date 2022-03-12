@@ -1,11 +1,8 @@
 
-APP:
-  ENVIRONMENT: prod
-  LOGGER : DEBUG
-  # Only accept True or False
 
-INPUT:
-  DIR : ~/PycharmProjects/new-america-housing-loss-public/cli/collection/tests/resources
+input:
+  dir : collection/tests/resources
 
-OUTPUT:
-  DIR : ~/PycharmProjects/new-america-housing-loss-public/reports
+correlations: true
+mp_geocode : false
+
