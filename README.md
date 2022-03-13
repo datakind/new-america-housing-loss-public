@@ -33,7 +33,9 @@ geolocation data.
     2. Supported config settings are : (__defaults__ in bold)
        1. logging_level: [CRITICAL, ERROR, WARNING, __INFO__, DEBUG]
        2. input:
-          1. dir: _input directory name_ (same as cli) (entered as nested dictionary, as shown here)
+          1. dir: _input directory name_ (same as cli)
+          2. entered as nested dictionary, as shown here
+          3. if command line includes directory name, cli overrides config file settings
        3. correlations : [__true__, false] - sets boolean to complete (or not) the correlation analysis plots
        4. mp_geocode: [__true__, false] - sets boolean to enable multi-processing of geo-coding operation
 
