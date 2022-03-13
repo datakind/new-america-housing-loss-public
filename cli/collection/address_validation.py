@@ -9,7 +9,7 @@ import scourgify
 
 from collection.address_cleaning import get_zipcode5
 from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
-from loggy import log_machine
+from logger_utils import log_machine
 
 
 # Requires input_path

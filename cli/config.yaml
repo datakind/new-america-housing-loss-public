@@ -3,6 +3,6 @@
 input:
   dir : collection/tests/resources
 
-correlations: true
+correlations: false
 mp_geocode : false
 

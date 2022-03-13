@@ -6,7 +6,7 @@ import typing as T
 import censusdata
 import pandas as pd
 
-from loggy import log_machine
+from logger_utils import log_machine
 
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
@@ -207,7 +207,8 @@ def fetch_data(
                 table_type: str,
                 api_key: str,
                 ) -> pd.DataFrame:
-    """Fetches data from Census Bureau API on a list of variables,
+    """
+    Fetches data from Census Bureau API on a list of variables,
     and returns a Pandas DataFrame.
 
     Parameters
@@ -276,7 +277,8 @@ def get_data_for_region(
                         detail_tables: T.List = None,
                         dataprofile_filter: T.List = [],
                         ) -> T.Tuple:
-    """Creates data and data dictionary from Census API for a region.
+    """
+    Creates data and data dictionary from Census API for a region.
 
     Parameters:
     -----------
@@ -337,7 +339,13 @@ def get_data_for_region(
 @log_machine
 def get_acs_data(state_fips: str, county_fips: str, year: int = 2019) \
                 -> T.Union[T.Tuple[pd.DataFrame, T.Dict], T.Tuple[None, None]]:
-    """Main function to get ACS data from the census API."""
+    """
+    Main function to get ACS data from the census API.
+    :param state_fips:
+    :param county_fips:
+    :param year:
+    :return:
+    """
 
     if state_fips is None or county_fips is None:
         return (None, None)
@@ -441,16 +449,14 @@ def get_acs_data(state_fips: str, county_fips: str, year: int = 2019) \
         "B25092",  # Median selected monthly owner costs as a % of household income
     ]
 
-    data, data_dict = get_data_for_region(
-        state_fips,
-        county_fips,
-        "acs5",
-        year,
-        dataprofile_tables=dataprofile_tables,
-        subject_tables=subject_tables,
-        detail_tables=detail_tables,
-        dataprofile_filter=fpr_variables_wishlist,
-    )
+    data, data_dict = get_data_for_region(state_fips,
+                                            county_fips,
+                                            "acs5",
+                                            year,
+                                            dataprofile_tables=dataprofile_tables,
+                                            subject_tables=subject_tables,
+                                            detail_tables=detail_tables,
+                                            dataprofile_filter=fpr_variables_wishlist)
 
     census_df = load_census_data(data)
 

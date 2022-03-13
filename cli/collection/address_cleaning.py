@@ -3,7 +3,7 @@ import typing as T
 import numpy as np
 import pandas as pd
 
-from loggy import log_machine
+from logger_utils import log_machine
 
 @log_machine
 def remove_special_chars(text: str) -> str:

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from dateutil.relativedelta import *
 
-from loggy import log_machine
+from logger_utils import log_machine
 
 # need below to suppress warnings associated with fake geoid code block - unnecessary for production code
 pd.options.mode.chained_assignment = None  # default='warn'

@@ -11,7 +11,7 @@ import scipy.stats as stats
 import seaborn as sns
 
 from const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
-from loggy import log_machine
+from logger_utils import log_machine
 
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None

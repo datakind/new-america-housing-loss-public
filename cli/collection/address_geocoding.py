@@ -32,7 +32,7 @@ from const import (
 )
 
 from collection.address_cleaning import get_zipcode5
-from loggy import log_machine
+from logger_utils import log_machine
 
 np.random.seed(RANDOM_SEED)
 

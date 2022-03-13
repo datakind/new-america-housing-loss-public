@@ -57,8 +57,8 @@ from const import (
 
 from timer import Timer
 
-from loggy import setup_logger
-from loggy import log_machine
+from logger_utils import setup_logger
+from logger_utils import log_machine
 
 
 @log_machine
@@ -291,7 +291,7 @@ def read_config(file_path):
 def feat_orchestration(config: dict) -> None:
     """
     This function is the main driver function to orchestrate the overall
-    execution flow for FEAT)
+    execution flow for FEAT
 
     :param config: dict, provides execution flow config values
             config['input']['dir'] = input files path
@@ -406,7 +406,9 @@ def feat_orchestration(config: dict) -> None:
 
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
+
     acs_df, acs_data_dict = get_acs_data(state_fips, county_fips)
+
     if acs_df is None:
         print(
             '\u2326  Insufficient geography information to retrieve ACS Data!',
@@ -632,8 +634,7 @@ if __name__ == "__main__":
     feat_orchestration(config)
 
     # log final message
-    main_time = tic.stop()
-    logger_msg = ' overall execution time = %.2f' % main_time
+    logger_msg = ' overall execution time = %.2f' % tic.stop()
     logger.critical('complete' + logger_msg)
 
 # ... end of script
