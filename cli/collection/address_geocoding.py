@@ -76,8 +76,11 @@ def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, N
         },
         inplace=True,
     )
+    # Ensure the correct order of columns for geocoding input - Incorrect ordering happens if
+    # some of the columns are originally missing, the code above just adds them at the end
+    correct_column_order = ["Unique ID", "Street address", "City", "State", "ZIP"]
 
-    return df_geocode_cols
+    return df_geocode_cols[correct_column_order]
 
 
 @log_machine
