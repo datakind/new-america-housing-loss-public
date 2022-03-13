@@ -610,6 +610,42 @@ def feat_orchestration(config: dict) -> None:
 
     return None
 
+
+def setup_this_run(sys_args):
+    """
+    initiate config dict which provides run control parameter settings
+    some default setting are defined
+    config file name 'config.yaml' from main directory is read (if available) and overwerites defaults
+    finally, if sys.argv had command line definition of input directory, that overwrites any previously stored string
+
+    :param sys_args: command line sys.argv list
+    :return: config: dict - k,v pairs of run config parameters
+    """
+
+    # some default config settings :
+
+    config = {}
+    config['mp_geocode'] = True
+    config['correlations'] = True
+    config['input'] = {}
+    config['input']['dir'] = ""
+
+    # if available, overwrite defaults with config.yaml file settings
+    try:
+        config_yml = read_config("config.yaml")
+
+        for ykey in config_yml:
+            if ykey in config:
+                config[ykey] = config_yml[ykey]
+    except FileNotFoundError as fnfe:
+        logger.info('config.yaml file not found - continuing with default settings')
+
+    # retain base capability to define input path as command line argument
+    if len(sys_args) > 1:
+        config['input']['dir'] = sys_args[1]
+
+    return config
+
 # ... -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # ... main() routine
 # ... -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -620,11 +656,7 @@ if __name__ == "__main__":
     logger = setup_logger()
     logger.critical('start')
 
-    config = read_config("config.yaml")
-
-    # retain base capability to define input path as command line argument
-    if len(sys.argv) > 1:
-        config['input']['dir'] = sys.argv[1]
+    config = setup_this_run(sys.argv)
 
     # set timer for overall process timing
     tic = Timer()

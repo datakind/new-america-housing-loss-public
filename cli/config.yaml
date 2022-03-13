@@ -4,5 +4,5 @@ input:
   dir : collection/tests/resources
 
 correlations: false
-mp_geocode : false
+mp_geocode : true
 
