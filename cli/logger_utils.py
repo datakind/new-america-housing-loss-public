@@ -4,21 +4,32 @@ import logging
 from timer import Timer
 
 
-def setup_logger():
+def setup_logger(sys_args: list, config: dict) -> logging.getLoggerClass():
     """
     initiate logger for main routine
     all hard coded options at the moment
-    TODO : add filename (log file) and logging level as run-time args or config options
     :return: logger object
     """
 
     log_format = "%(levelname)s | %(asctime)s | %(name)s | %(message)s"
 
-    logging.basicConfig(filename="FEAT.log",
+    log_filename = sys_args[0].strip('.py') + '.log'
+
+    logging.basicConfig(filename=log_filename,
                         filemode="w",
                         format=log_format,
                         level=logging.INFO)
-    return logging.getLogger()
+
+    logger = logging.getLogger()
+
+    try:
+        if 'logging_level' in config:
+            log_level = logging.getLevelName(config['logging_level'])
+            logger.setLevel(log_level)
+    except Exception as e:
+        logger.info('Exception in setting log level from config file : ' + str(e))
+
+    return logger
 
 
 def log_machine(f):

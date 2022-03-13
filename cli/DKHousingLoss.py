@@ -635,8 +635,8 @@ def setup_this_run(sys_args):
         config_yml = read_config("config.yaml")
 
         for ykey in config_yml:
-            if ykey in config:
-                config[ykey] = config_yml[ykey]
+            config[ykey] = config_yml[ykey]
+
     except FileNotFoundError as fnfe:
         logger.info('config.yaml file not found - continuing with default settings')
 
@@ -653,10 +653,10 @@ def setup_this_run(sys_args):
 
 if __name__ == "__main__":
 
-    logger = setup_logger()
-    logger.critical('start')
-
     config = setup_this_run(sys.argv)
+
+    logger = setup_logger(sys.argv, config)
+    logger.critical('start')
 
     # set timer for overall process timing
     tic = Timer()
