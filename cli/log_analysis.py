@@ -1,8 +1,20 @@
 
+"""
+utiliity function to summarize execution time, function calls from log file
+"""
+
 import pandas as pd
 
+LOG_FILE = 'DKHousingLoss.log'
 
-def read_log_file(f_path):
+
+def read_log_file(f_path: str) -> pd.DataFrame:
+    """
+    reads log file, retruns as dataframe
+
+    :param f_path:
+    :return: df_logs : pd.DataFrame,
+    """
 
     colnames =['level', 'time', 'caller', 'function', 'start_or_end', 'exec_time']
     df_logs = pd.read_csv(f_path, sep="|", header=None, names=colnames)
@@ -13,9 +25,19 @@ def read_log_file(f_path):
     return df_logs
 
 
-def log_file_summary_analysis():
+def log_file_summary_analysis(log_filename: str) -> pd.DataFrame:
+    """
+    performs pivot table type summary of log file
+    returns table that includes:
+        time duration in each function (total for all calls)
+        number of times each function is called during execution
+        (this assumes logging_level was set to INFO to record entry and exit fo each function)
 
-    df_logs = read_log_file("FEAT.log")
+    :param log_filename:
+    :return: df_logs_tbl, pd.DataFrame, pivot table type summary log file
+    """
+
+    df_logs = read_log_file(log_filename)
 
     df_logs = df_logs[df_logs.level == 'INFO']
 
@@ -33,12 +55,13 @@ def log_file_summary_analysis():
                             inplace=True)
     df_logs_tbl.reset_index(inplace=True, drop=True)
 
-    df_logs_tbl.to_csv("log_summary.csv", index=False)
-
-    print(df_logs_tbl)
+    return df_logs_tbl
 
 
 if __name__ == "__main__":
 
-    log_file_summary_analysis()
+    df_summary_tbl = log_file_summary_analysis(LOG_FILE)
+
+    df_summary_tbl.to_csv("log_summary.csv", index=False)
+    print(df_summary_tbl)
 

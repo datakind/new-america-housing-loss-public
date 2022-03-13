@@ -288,10 +288,10 @@ def read_config(file_path):
 
 
 @log_machine
-def feat_orchestration(config: dict) -> None:
+def housing_loss_orchestration(config: dict) -> None:
     """
     This function is the main driver function to orchestrate the overall
-    execution flow for FEAT
+    execution flow for the housing loss analysis
 
     :param config: dict, provides execution flow config values
             config['input']['dir'] = input files path
@@ -663,7 +663,7 @@ if __name__ == "__main__":
     tic.start()
 
     # ... main routine
-    feat_orchestration(config)
+    housing_loss_orchestration(config)
 
     # log final message
     logger_msg = ' overall execution time = %.2f' % tic.stop()

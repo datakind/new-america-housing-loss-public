@@ -1,5 +1,5 @@
 
-logging_level: XXXXXX
+logging_level: INFO
 
 input:
   dir : collection/tests/resources

@@ -1,4 +1,7 @@
 
+"""
+utility functions to establish logging functionality
+"""
 
 import logging
 from timer import Timer
