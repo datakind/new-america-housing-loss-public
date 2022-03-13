@@ -21,14 +21,23 @@ geolocation data.
    1. For Mac/Linux, run `python -m pip install -r requirements.txt`
    2. For Windows, run `py -m pip install -r requirements.txt`
 10. Run the tool against your data:
-    1. For Mac/Linux, run `python FEAT.py /path/to/input_data/`
-    2. For Windows, run `py FEAT.py C:\path\to\input_data\`
+    1. For Mac/Linux, run `python DKHousingLoss.py /path/to/input_data/`
+    2. For Windows, run `py DKHousingLoss.py C:\path\to\input_data\`
 11. The output will be available one level up from your data directory in a folder called `output_data`
     1. The `analysis_plots` directory contains time series and correlation analysis of your content
     2. The `data_summaries` directory contains a summary of evictions/foreclosures by geocode (enriched with American Community Survey (ACS) data)
     3. The `full_datasets` directory contains all eviction/foreclosure geocoded records
     4. The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
+12. __Optionally__ ....
+    1. in addition to command line interface for defining input directory, a config file can be used. The config file name, be default, is _config.yaml_ and is located in same diretory as main script
+    2. Supported config settings are : (__defaults__ in bold)
+       1. logging_level: [CRITICAL, ERROR, WARNING, __INFO__, DEBUG]
+       2. input:
+          1. dir: _input directory name_ (same as cli) (entered as nested dictionary, as shown here)
+       3. correlations : [__true__, false] - sets boolean to complete (or not) the correlation analysis plots
+       4. mp_geocode: [__true__, false] - sets boolean to enable multi-processing of geo-coding operation
 
+    
 ## Structure
 
 * `cli/` - code to run the DataKind New America Housing Loss Analysis Tool
