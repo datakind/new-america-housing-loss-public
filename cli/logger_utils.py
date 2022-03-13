@@ -26,8 +26,8 @@ def setup_logger(sys_args: list, config: dict) -> logging.getLoggerClass():
         if 'logging_level' in config:
             log_level = logging.getLevelName(config['logging_level'])
             logger.setLevel(log_level)
-    except Exception as e:
-        logger.info('Exception in setting log level from config file : ' + str(e))
+    except ValueError as ve:
+        logger.critical('ValueError in setting log level from config file : ' + str(ve))
 
     return logger
 
