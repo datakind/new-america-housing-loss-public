@@ -29,7 +29,7 @@ geolocation data.
     3. The `full_datasets` directory contains all eviction/foreclosure geocoded records
     4. The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
 12. __Optionally__ ....
-    1. in addition to command line interface for defining input directory, a config file can be used. The config file name, be default, is _config.yaml_ and is located in same diretory as main script
+    1. in addition to command line interface for defining input directory, a config file can be used. The config file name, be default, is _config.yaml_ and is located in the same directory as the main script
     2. Supported config settings are : (__defaults__ in bold)
        1. logging_level: [CRITICAL, ERROR, WARNING, __INFO__, DEBUG]
        2. input:
