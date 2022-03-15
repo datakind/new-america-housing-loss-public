@@ -4,6 +4,11 @@ A Command Line Interface (CLI) that allows users to ingest eviction,
 foreclosure, and tax lien data and outputs statistical summaries and 
 geolocation data. 
 
+##  User Guide
+
+The complete User Guide can be found here : [User Guide](https://www.newamerica.org/future-land-housing/reports/foreclosure-and-eviction-analysis-tool/)
+The below CLI Usage Instructions provides basic instructions to get started.
+
 ## Python CLI Usage Instructions
 1. Ensure your data format is configured based on the required specification 
    1. This [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true) presents the data requirements
@@ -23,6 +28,7 @@ geolocation data.
 10. Run the tool against your data:
     1. For Mac/Linux, run `python DKHousingLoss.py /path/to/input_data/`
     2. For Windows, run `py DKHousingLoss.py C:\path\to\input_data\`
+    3. **N.B. You must include the terminating slash on the directory name, e.g., .../input_data/**
 11. The output will be available one level up from your data directory in a folder called `output_data`
     1. The `analysis_plots` directory contains time series and correlation analysis of your content
     2. The `data_summaries` directory contains a summary of evictions/foreclosures by geocode (enriched with American Community Survey (ACS) data)
