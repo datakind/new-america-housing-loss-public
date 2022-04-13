@@ -1,3 +1,6 @@
+
+
+import logging
 import typing as T
 from pathlib import Path
 
@@ -6,33 +9,58 @@ import scourgify
 
 from collection.address_cleaning import get_zipcode5
 from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
+from logger_utils import log_machine
 
 
 # Requires input_path
+
+from pathlib import PurePath
+
+@log_machine
 def verify_input_directory(input_path: str) -> T.List:
     """Parse the command line input and determine a directory path."""
+
+    logger = logging.getLogger(__name__)
+
     directory_contents = [x for x in Path(input_path).iterdir()]
-    sub_directories = set(
-        [
-            str(f).replace(input_path, '').lower()
-            for f in directory_contents
-            if f.is_dir()
-        ]
-    )
+
+    # base code - not robust to / inclusion or exclusion in dir_path setting
+    # comment out and replace with subsequent method using PurePath
+    # sub_directories = set(
+    #     [
+    #         str(f).replace(input_path, '').lower()
+    #         for f in directory_contents
+    #         if f.is_dir()
+    #     ]
+    # )
+
+    # more robust method to split directory names
+    sub_directories = set([PurePath(f).parts[-1] for f in directory_contents if f.is_dir()])
+
 
     if len(directory_contents) == 0:
         print('\u2326  Directory is empty!')
-        return None
+        logger.critical('directory is empty')
+        return []
+
     if len(sub_directories) == 0:
         print('\u2326  No sub-directories present in input directory')
-        return None
+        logger.critical('no sub-directories found in input directory')
+        return []
+
     if len(sub_directories.intersection(REQUIRED_SUB_DIRECTORIES)) == 0:
         print('\u2326  Required sub-directories missing from input directory')
-        return None
+        logger.critical('required sub-sirectories missing from input directory')
+        return []
+
     print('\u2713  Required sub-directories found in input directory!')
-    return [Path(input_path) / sd for sd in sub_directories]
+
+    ls_input_dirs = [Path(input_path) / sd for sd in sub_directories]
+
+    return ls_input_dirs
 
 
+@log_machine
 def search_dataframe_column(
     df_to_search: pd.DataFrame, col_to_find: str, alt_col_name: str
 ) -> T.Tuple[bool, T.Union[str, None]]:
@@ -73,6 +101,7 @@ def search_dataframe_column(
     return found_column, use_alt_column
 
 
+@log_machine
 def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     """Validates and cleans the address data
     Creates indicator variables to assign GEOIDs
@@ -178,6 +207,7 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     return data, columns_to_return
 
 
+@log_machine
 def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
     """Given an address string, return a dict of standardized address tags.
 
@@ -202,6 +232,7 @@ def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
         return None
 
 
+@log_machine
 def standardize_input_addresses(
     input_df: pd.DataFrame, data_type: str
 ) -> T.Union[T.Tuple[pd.DataFrame, list], T.Tuple[None, None]]:

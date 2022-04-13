@@ -6,6 +6,7 @@ Created on Sat Sep 18 23:11:22 2021
 import logging
 import os
 import sys
+import yaml
 import typing as T
 from functools import reduce
 from pathlib import Path
@@ -54,7 +55,13 @@ from const import (
     TRACT_BOUNDARY_FILENAME,
 )
 
+from timer import Timer
 
+from logger_utils import setup_logger
+from logger_utils import log_machine
+
+
+@log_machine
 def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     """Load evictions data from csv template
     Inputs
@@ -67,12 +74,16 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     -------
     cleaned_df: Processed pandas dataframe for next step of geo matching
     """
+
     for data_dir in sub_directories:
+
         # If this sub directory does not match the data_category, skip it:
         if data_category not in str(data_dir):
             continue
+
         # If this is right subdirectory, list the files in the directory
         data_files = os.listdir(data_dir)
+
         # Alert user if there are no files in the relevant subdirectory
         if len(data_files) == 0:
             print('\n\u2326', 'Empty sub directory ', data_dir, ' - nothing to process')
@@ -87,9 +98,11 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 data_files,
             )
         data = pd.DataFrame()
+
         # Loop through the files
         for f in data_files:
             print('Loading file: ', f, ' of ', data_files)
+
             # Read in file depending on file format
             if str(f.lower()).startswith(data_category):
                 if str(f.lower()).endswith('.csv'):
@@ -103,6 +116,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 else:
                     print(f'Invalid file detected {str(f)}')
             else:
+
                 # Let user know about invalid files
                 print(
                     u'\u2326',
@@ -135,6 +149,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 data_category,
             )
         print('\nProcessing duplicate and empty rows:')
+
         # Drop FULL duplicates
         rows = data.shape[0]
         print('You are starting with ', rows, ' rows in your data set.')
@@ -145,6 +160,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
             round(abs(100 * (data.shape[0] - rows) / rows), 1),
             '% of your rows.',
         )
+
         # Convert columns names to lowercase and remove any special characters
         data.columns = [
             remove_special_chars(col.replace(' ', "_").lower().strip())
@@ -246,6 +262,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     return None
 
 
+@log_machine
 def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
     """Simple helper function to write a dataframe to disk."""
     # Check for empty input
@@ -257,16 +274,43 @@ def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
     input_df.to_csv(str(write_path_filename), index=False)
 
 
-def main(input_path: str) -> None:
-    """This function is what it says it is. :)
-
-    It takes in the input data path as an argument
+@log_machine
+def read_config(file_path):
     """
+    :param file_path:
+    :return: cfg, loaded yaml file
+    """
+
+    with open(file_path, "r") as f:
+        cfg = yaml.safe_load(f)
+
+    return cfg
+
+
+@log_machine
+def housing_loss_orchestration(config: dict) -> None:
+    """
+    This function is the main driver function to orchestrate the overall
+    execution flow for the housing loss analysis
+
+    :param config: dict, provides execution flow config values
+            config['input']['dir'] = input files path
+            config['correlation'] : boolean, execute or not the correlation analysis
+            config['multiprocessor'] : boolean, implement mp during geocoding
+
+    :return: None
+    """
+
+    logger = logging.getLogger(__name__)
+
     # LOOK FOR CORRECT SUBDIRECTORY STRUCTURE
+    input_path = config['input']['dir']
     sub_directories = verify_input_directory(input_path)
+
     # If the input_directory fails, the main function should abort:
-    if sub_directories is None:
-        return "The path provided does not have the expected subdirectory structure."
+    if not sub_directories:
+        logger.critical('The path provided does not have the expected subdirectory structure')
+        return None
 
     # LOAD ALL 3 TYPES OF DATA (AS AVAILABLE)
     df_evic = load_data(sub_directories, 'evictions')
@@ -276,20 +320,14 @@ def main(input_path: str) -> None:
     if (df_evic is None) and (df_mort is None) and (df_tax is None):
         print(
             'No data files matched our requirements for this analysis.'
-            'Please check the files and restart.'
-        )
+            'Please check the files and restart.')
+        logger.critical('No data files matched requirements for this analysis.\n Please check the files and restart')
         return None
 
     # STANDARDIZE THE INPUT DATA ADDRESSES
-    df_evic_standardized, evic_avail_cols = standardize_input_addresses(
-        df_evic, 'eviction'
-    )
-    df_mort_standardized, mort_avail_cols = standardize_input_addresses(
-        df_mort, 'foreclosure'
-    )
-    df_tax_standardized, tax_avail_cols = standardize_input_addresses(
-        df_tax, 'tax lien'
-    )
+    df_evic_standardized, evic_avail_cols = standardize_input_addresses(df_evic, 'eviction')
+    df_mort_standardized, mort_avail_cols = standardize_input_addresses(df_mort, 'foreclosure')
+    df_tax_standardized, tax_avail_cols = standardize_input_addresses(df_tax, 'tax lien')
 
     # print(evic_avail_cols)
     # print(mort_avail_cols)
@@ -298,13 +336,13 @@ def main(input_path: str) -> None:
     # CREATE TIME SERIES PLOTS
     plt.rcParams['figure.figsize'] = [25, 10]
     fig1 = create_timeseries(df_evic_standardized, 'eviction_filing_date', 'Evictions')
-    fig2 = create_timeseries(
-        df_mort_standardized, 'foreclosure_sale_date', 'Foreclosures'
-    )
+    fig2 = create_timeseries(df_mort_standardized, 'foreclosure_sale_date', 'Foreclosures')
     fig3 = create_timeseries(df_tax_standardized, 'tax_lien_sale_date', 'Tax_Liens')
+
     # Create the directories to output the plots to
     plot_write_path = Path(input_path).parent / OUTPUT_PATH_PLOTS
     plot_write_path.mkdir(parents=True, exist_ok=True)
+
     # Save the plots to this directory
     plt.legend(prop={'size': 20})
     plt.savefig(str(plot_write_path / HOUSING_LOSS_TIMESERIES_FILENAME))
@@ -320,20 +358,26 @@ def main(input_path: str) -> None:
 
     df_evic_geocoded_final = None
     df_mort_geocoded_final = None
+
     if df_evic_standardized is not None:
-        df_evic_geocoded_final = geocode_input_data(
-            df_evic_standardized, evic_avail_cols, 'eviction', geocoder_cache_write_path
-        )
+        df_evic_geocoded_final = geocode_input_data(df_evic_standardized,
+                                                    evic_avail_cols,
+                                                    'eviction',
+                                                    geocoder_cache_write_path,
+                                                    config['mp_geocode'])
+
     if df_mort_standardized is not None:
-        df_mort_geocoded_final = geocode_input_data(
-            df_mort_standardized,
-            mort_avail_cols,
-            'foreclosure',
-            geocoder_cache_write_path,
-        )
-    df_tax_geocoded_final = geocode_input_data(
-        df_tax_standardized, tax_avail_cols, 'tax lien', geocoder_cache_write_path
-    )
+        df_mort_geocoded_final = geocode_input_data(df_mort_standardized,
+                                                    mort_avail_cols,
+                                                    'foreclosure',
+                                                    geocoder_cache_write_path,
+                                                    config['mp_geocode'])
+
+    df_tax_geocoded_final = geocode_input_data(df_tax_standardized,
+                                               tax_avail_cols,
+                                               'tax lien',
+                                               geocoder_cache_write_path,
+                                               config['mp_geocode'])
 
     # Create the directories to output the raw geocoded datasets to
     geocoded_file_write_path = Path(input_path).parent / OUTPUT_PATH_GEOCODED_DATA
@@ -362,7 +406,9 @@ def main(input_path: str) -> None:
 
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
+
     acs_df, acs_data_dict = get_acs_data(state_fips, county_fips)
+
     if acs_df is None:
         print(
             '\u2326  Insufficient geography information to retrieve ACS Data!',
@@ -385,8 +431,8 @@ def main(input_path: str) -> None:
             + ' - inspect for ACS variable definitions and reference'
         )
 
-    ### Grab the renter and home owner total count estimates we'll use
-    ### later for housing loss rate calculations
+    # Grab the renter and home owner total count estimates we'll use
+    # later for housing loss rate calculations
     renter_hhs = acs_df[['GEOID', 'total-renter-occupied-households']].copy()
     owner_hhs = acs_df[['GEOID', 'total-owner-occupied-households']].copy()
     # Standardize column name
@@ -403,7 +449,8 @@ def main(input_path: str) -> None:
     mort_summ = summarize_housing_loss(df_mort_geocoded_final, owner_hhs, 'mort')
     tax_summ = summarize_housing_loss(df_tax_geocoded_final, owner_hhs, 'tax')
 
-    # Stack the data together for summarization while counting all housing loss events for the housing loss index calculation
+    # Stack the data together for summarization while counting all housing loss events
+    # for the housing loss index calculation
     coll_dfs = []
     msg = ' with data from'
     if evic_summ is not None:
@@ -450,7 +497,8 @@ def main(input_path: str) -> None:
         else:
             df_summ_mrg['total_housing_loss'] = df_summ_mrg['total_filings']
 
-    # Calculate the housing loss index - note this assumes complete records of evictions and foreclosures for all years present in eviction data
+    # Calculate the housing loss index - note this assumes complete records of evictions and foreclosures
+    # for all years present in eviction data
     df_summ_mrg['housing-loss-index'] = (
         df_summ_mrg['total_housing_loss']
         / (
@@ -501,26 +549,29 @@ def main(input_path: str) -> None:
     # evictions --> 'total_filings'
     # mortgage foreclosures including tax liens --> 'total_foreclosures'
     # all housing loss events --> 'housing-loss-index'
-    plt.rcParams['figure.figsize'] = [15, 10]
 
-    try:
-        correlation_analysis(
-            acs_df, df_summ_mrg, 'housing-loss-index', all_housing_loss_write_path
-        )
-    except KeyError:
-        print('Unable to create correlations for housing-loss-index')
+    if config['correlations']:
 
-    try:
-        correlation_analysis(acs_df, df_summ_mrg, 'total_filings', evictions_write_path)
-    except KeyError:
-        print('Unable to create correlations for total_filings')
+        plt.rcParams['figure.figsize'] = [15, 10]
 
-    try:
-        correlation_analysis(
-            acs_df, df_summ_mrg, 'total_foreclosures', foreclosure_write_path
-        )
-    except KeyError:
-        print('Unable to create correlations for total_foreclosures')
+        try:
+            correlation_analysis(
+                acs_df, df_summ_mrg, 'housing-loss-index', all_housing_loss_write_path
+            )
+        except KeyError:
+            print('Unable to create correlations for housing-loss-index')
+
+        try:
+            correlation_analysis(acs_df, df_summ_mrg, 'total_filings', evictions_write_path)
+        except KeyError:
+            print('Unable to create correlations for total_filings')
+
+        try:
+            correlation_analysis(
+                acs_df, df_summ_mrg, 'total_foreclosures', foreclosure_write_path
+            )
+        except KeyError:
+            print('Unable to create correlations for total_foreclosures')
 
     # Create the directories to output the mapping files to
     mapping_write_path = Path(input_path).parent / OUTPUT_PATH_MAPS
@@ -532,18 +583,23 @@ def main(input_path: str) -> None:
         state_fips, county_fips, str(mapping_write_path / TRACT_BOUNDARY_FILENAME)
     )
     print('*** Created ' + str(mapping_write_path / TRACT_BOUNDARY_FILENAME))
+
     # Merge the geometry dataframe with the housing + ACS data summary, but avoid
     #   duplicate column names (since they are non-case sensitive in databases)
     # First drop the 'index' column also, since the `censusdata.censusgeo.censusgeo` datatype
     #   throws an error in the .gpkg file creation
+
     df_summ_mrg.drop(columns='index', inplace=True)
+
     if 'geoid' in df_summ_mrg.columns and 'GEOID' in df_summ_mrg.columns:
         df_summ_mrg.drop(columns='GEOID', inplace=True)
     elif 'GEOID' in df_summ_mrg.columns:
         df_summ_mrg.rename(columns={'GEOID': 'geoid'}, inplace=True)
+
     df_summ_mrg['geoid'] = df_summ_mrg['geoid'].astype('str').str.zfill(11)
     merged_gdf = geojson_gdf.merge(df_summ_mrg, how='left', on='geoid')
     merged_gdf.to_file(str(mapping_write_path / GIS_IMPORT_FILENAME), driver='GPKG')
+
     print('*** Created ' + str(mapping_write_path / GIS_IMPORT_FILENAME))
 
     # Now that we have got through the entire process, delete the cached geocoded files
@@ -555,9 +611,62 @@ def main(input_path: str) -> None:
     return None
 
 
+def setup_this_run(sys_args):
+    """
+    initiate config dict which provides run control parameter settings
+    some default setting are defined
+    config file name 'config.yaml' from main directory is read (if available) and overwerites defaults
+    finally, if sys.argv had command line definition of input directory, that overwrites any previously stored string
+
+    :param sys_args: command line sys.argv list
+    :return: config: dict - k,v pairs of run config parameters
+    """
+
+    # some default config settings :
+
+    config = {}
+    config['mp_geocode'] = True
+    config['correlations'] = True
+    config['input'] = {}
+    config['input']['dir'] = ""
+
+    # if available, overwrite defaults with config.yaml file settings
+    try:
+        config_yml = read_config("config.yaml")
+
+        for ykey in config_yml:
+            config[ykey] = config_yml[ykey]
+
+    except FileNotFoundError as fnfe:
+        logger.info('config.yaml file not found - continuing with default settings')
+
+    # retain base capability to define input path as command line argument
+    if len(sys_args) > 1:
+        config['input']['dir'] = sys_args[1]
+
+    return config
+
+# ... -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# ... main() routine
+# ... -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
-    )
-    dir_path = sys.argv[1]
-    main(dir_path)
+
+    config = setup_this_run(sys.argv)
+
+    logger = setup_logger(sys.argv, config)
+    logger.critical('start')
+
+    # set timer for overall process timing
+    tic = Timer()
+    tic.start()
+
+    # ... main routine
+    housing_loss_orchestration(config)
+
+    # log final message
+    logger_msg = ' overall execution time = %.2f' % tic.stop()
+    logger.critical('complete' + logger_msg)
+
+# ... end of script

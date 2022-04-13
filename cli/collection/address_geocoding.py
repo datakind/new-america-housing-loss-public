@@ -14,6 +14,10 @@ import pandas as pd
 import requests
 from tqdm import tqdm
 
+import concurrent.futures as cf
+import multiprocessing
+from collections import deque
+
 # Global Variables
 from const import (
     GEOCODE_CACHE_SIZE,
@@ -27,11 +31,13 @@ from const import (
     RANDOM_SEED,
 )
 
+from collection.address_cleaning import get_zipcode5
+from logger_utils import log_machine
+
 np.random.seed(RANDOM_SEED)
 
-from collection.address_cleaning import get_zipcode5
 
-
+@log_machine
 def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, None]:
     """Given an input dataframe of clean addresses, format it to match Census batch geocoder specs."""
     # Check for empty input
@@ -77,21 +83,28 @@ def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, N
     return df_geocode_cols[correct_column_order]
 
 
+@log_machine
 def generate_geocode_chunks(df_geocode_cols: pd.DataFrame) -> pd.DataFrame:
     """Generate chunks of large files already formatted for the Census batch geocoder API"""
+
     full_row_count = len(df_geocode_cols)
     # If the dataset size is <= the chunk size, just yield it and return afterwards
+
     if full_row_count <= GEOCODE_CHUNK_SIZE:
         yield df_geocode_cols
         return
+
     chunk_start_row = 0
+
     while chunk_start_row < full_row_count:
         chunk_end_row = min(full_row_count, chunk_start_row + GEOCODE_CHUNK_SIZE - 1)
+
         # print(chunk_start_row, chunk_end_row)
         yield df_geocode_cols.loc[chunk_start_row:chunk_end_row, :]
         chunk_start_row += GEOCODE_CHUNK_SIZE
 
 
+# NB : DO NOT add @log_machine decorator - interrupts multiprocessing !!
 def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     """Geocode a given chunk of data using the census batch geocoding API
 
@@ -103,30 +116,83 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     -------
     geocoded_df: geocoded response of the input dataset
     """
+
+    logger = logging.getLogger(__name__)
+
     text_df = df_chunk.to_csv(index=False, header=None)
+
     files = {"addressFile": ("chunk.csv", text_df, "text/csv")}
+
     r = requests.post(GEOCODE_URL, files=files, data=GEOCODE_PAYLOAD)
 
-    geocoded_df = pd.read_csv(
-        io.StringIO(r.text), names=GEOCODE_RESPONSE_HEADER, low_memory=False
-    )
-    geocoded_df[["long", "lat"]] = (
-        geocoded_df["coordinates"].astype("str").str.split(",", expand=True)
-    )
+    geocoded_df = pd.read_csv(io.StringIO(r.text), names=GEOCODE_RESPONSE_HEADER, low_memory=False)
+
+    geocoded_df[["long", "lat"]] = (geocoded_df["coordinates"].astype("str").str.split(",", expand=True))
 
     return geocoded_df
 
 
-def census_geocode_full_dataset(
-    input_df: pd.DataFrame, data_type: str, cache_filepath: str
-) -> T.Union[pd.DataFrame, None]:
-    """Given an input dataframe with address data, geocode all the records in it."""
+@log_machine
+def mp_geocoder(df):
+
+    logger = logging.getLogger(__name__)
+
+    cpus = min(int(0.9 * multiprocessing.cpu_count()), len(df))
+
+    procs = deque()
+    df_splits = np.array_split(df, cpus)
+
+    logger.info('%d cpus allocated' % cpus)
+
+    try:
+        logger.info("begin mp executor ...")
+        with cf.ProcessPoolExecutor(max_workers=cpus) as executor:
+            for df_slice in df_splits:
+                procs.append(
+                    executor.submit(census_geocode_records, df_slice))
+
+    except AttributeError as ae:
+        print("*** Attribute Error : %s" % ae)
+        exit()
+    except Exception as e:
+        print("*** Exception raised : %s" % e)
+        exit()
+
+    logger.info('extract results from completed processes')
+    results = (future.result() for future in cf.as_completed(procs))
+
+    logger.info('assemble sliced results')
+    df_coded = pd.DataFrame()
+    for df_slice in results:
+        df_coded = pd.concat([df_coded, df_slice])
+
+    logger.info('mp complete')
+    return df_coded
+
+
+@log_machine
+def census_geocode_full_dataset(input_df: pd.DataFrame,
+                                data_type: str,
+                                cache_filepath: str,
+                                mp_geocode: bool) -> T.Union[pd.DataFrame, None]:
+    """
+    Given an input dataframe with address data, geocode all the records in it.
+
+    :param input_df:
+    :param data_type:
+    :param cache_filepath:
+    :param multiprocess:
+    :return:
+    """
+
+    logger = logging.getLogger(__name__)
+
     # Check for error condition
     if input_df is None:
         return None
 
     # Initialize some variables
-    output_df = pd.DataFrame()
+    df_geocoded = pd.DataFrame()
     total_geocoded_chunks = 0
     cache_every_n_chunks = math.ceil(GEOCODE_CACHE_SIZE / GEOCODE_CHUNK_SIZE)
     cache_filename = (
@@ -135,11 +201,14 @@ def census_geocode_full_dataset(
 
     # Check to see if cached data are available; if so, use them
     cached_df = None
+
     if Path(cache_filename).is_file():
         print("Found cached data, resuming geocoding from the previous cache point...")
         cached_df = pd.read_csv(cache_filename)
+
         # Use the `id` column to find the cached record IDs from the original dataframe
         cached_ids = cached_df["id"].unique()
+
         # Remove those record IDs from the original dataframe and geocode the rest
         input_df = input_df[~input_df.index.isin(cached_ids)]
 
@@ -147,67 +216,89 @@ def census_geocode_full_dataset(
     df_geocode_cols = format_data_for_geocoding(input_df)
 
     # Loop through the dataframe chunks and geocode them
-    for chunk in tqdm(
-        generate_geocode_chunks(df_geocode_cols),
-        desc="Geocoding progress",
-        total=math.ceil(len(df_geocode_cols) / GEOCODE_CHUNK_SIZE),
-    ):
-        geocoded_chunk = census_geocode_records(chunk)
-        if len(output_df) == 0:
-            output_df = geocoded_chunk
-        else:
-            output_df = pd.concat([output_df, geocoded_chunk], ignore_index=True)
 
-        # Check how many chunks we have geocoded and cache if it is time to do so
-        total_geocoded_chunks += 1
-        if total_geocoded_chunks % cache_every_n_chunks == 0:
-            # If we have a cache available, append to the geocoded data, assuming process resumed
-            if cached_df is not None:
-                output_df = pd.concat([cached_df, output_df], ignore_index=True)
-            output_df.to_csv(cache_filename, index=False)
+    # these are the columns in df_geocode_cols :
+    # ['Unique ID', 'Street address', 'City', 'State', 'ZIP']
+
+    if mp_geocode:
+
+        df_geocoded = mp_geocoder(df_geocode_cols)
+
+        logger.info('multi-processed geocoding complete')
+
+    else:
+
+        for chunk in tqdm(generate_geocode_chunks(df_geocode_cols),
+                            desc="Geocoding progress",
+                            total=math.ceil(len(df_geocode_cols) / GEOCODE_CHUNK_SIZE),):
+
+            geocoded_chunk = census_geocode_records(chunk)
+
+            # columns returned in geocoded_chunk :
+            # ['id', 'geocoded_address', 'is_match', 'is_exact', 'returned_address', 'coordinates', 'tiger_line',
+            # 'side', 'state_fips', 'county_fips', 'tract', 'block', 'long', 'lat']
+
+            if len(df_geocoded) == 0:
+                df_geocoded = geocoded_chunk
+            else:
+                df_geocoded = pd.concat([df_geocoded, geocoded_chunk], ignore_index=True)
+
+            # Check how many chunks we have geocoded and cache if it is time to do so
+            total_geocoded_chunks += 1
+            if total_geocoded_chunks % cache_every_n_chunks == 0:
+
+                # If we have a cache available, append to the geocoded data, assuming process resumed
+                if cached_df is not None:
+                    df_geocoded = pd.concat([cached_df, df_geocoded], ignore_index=True)
+                df_geocoded.to_csv(cache_filename, index=False)
 
     # If we have a cache available, append to the geocoded data, assuming process resumed
     if cached_df is not None:
-        output_df = pd.concat([cached_df, output_df], ignore_index=True)
+        df_geocoded = pd.concat([cached_df, df_geocoded], ignore_index=True)
 
-    return output_df
+    return df_geocoded
 
 
-def append_census_geocode_data(
-    address_df: pd.DataFrame, data_type: str, cache_filepath: str
-) -> T.Union[pd.DataFrame, None]:
+@log_machine
+def append_census_geocode_data(address_df: pd.DataFrame,
+                               data_type: str,
+                               cache_filepath: str,
+                               mp_geocode: bool) -> T.Union[pd.DataFrame, None]:
     """Append census geocoder data to the dataframe containing raw/standardized addresses."""
+
     if address_df is None:
         return None, None
 
     # Geocode all the records and get back the data
-    geocoder_data = census_geocode_full_dataset(address_df, data_type, cache_filepath)
+    geocoder_data = census_geocode_full_dataset(address_df, data_type, cache_filepath, mp_geocode)
+
     if geocoder_data.empty:
         return None, None
+
     # The return dataframe has an `id` column
     # This is the index of the input dataframe, use it for dedup and joining back
     geocoder_data.drop_duplicates(subset="id", inplace=True)
     geocoder_data.set_index("id", inplace=True)
 
-    output_geocoded_df = address_df.merge(
-        geocoder_data, how="left", left_index=True, right_index=True
-    )
+    output_geocoded_df = address_df.merge(geocoder_data, how="left", left_index=True, right_index=True)
+
     # Create a census geoid column
     state_fips = [
-        str(int(x)).zfill(2) if pd.notna(x) else ""
-        for x in output_geocoded_df["state_fips"]
-    ]
+                    str(int(x)).zfill(2) if pd.notna(x) else ""
+                    for x in output_geocoded_df["state_fips"]
+                ]
     county_fips = [
-        str(int(x)).zfill(3) if pd.notna(x) else ""
-        for x in output_geocoded_df["county_fips"]
-    ]
+                    str(int(x)).zfill(3) if pd.notna(x) else ""
+                    for x in output_geocoded_df["county_fips"]
+                ]
     tract_id = [
         str(int(x)).zfill(6) if pd.notna(x) else "" for x in output_geocoded_df["tract"]
     ]
 
     output_geocoded_df["geoid"] = [
-        x[0] + x[1] + x[2] for x in zip(state_fips, county_fips, tract_id)
-    ]
+                                    x[0] + x[1] + x[2] for x in zip(state_fips, county_fips, tract_id)
+                                ]
+
     # Replace blanks by NaN/missing
     output_geocoded_df["geoid"].replace("", np.nan, inplace=True)
 
@@ -217,6 +308,7 @@ def append_census_geocode_data(
     return output_geocoded_df, success_record_count
 
 
+@log_machine
 def zip_to_tract_lookup(zipcode: str, data_year: int = 2020) -> str:
     """Determine (probabilistically) the census tract for a given zipcode.
     Inputs
@@ -261,6 +353,7 @@ def zip_to_tract_lookup(zipcode: str, data_year: int = 2020) -> str:
             return result["geoid"]
 
 
+@log_machine
 def append_zip_to_tract_data(
     addr_geocode_df: pd.DataFrame,
 ) -> T.Union[pd.DataFrame, None]:
@@ -295,13 +388,19 @@ def append_zip_to_tract_data(
     return output_geocoded_df, success_record_count
 
 
-def geocode_input_data(
-    input_df: pd.DataFrame, df_avail_cols: T.List, data_type: str, cache_filepath: str
-) -> T.Union[pd.DataFrame, None]:
-    """Main method for geocoding raw/standardized data.
-
+@log_machine
+def geocode_input_data(input_df: pd.DataFrame,
+                       df_avail_cols: T.List,
+                       data_type: str,
+                       cache_filepath: str,
+                       mp_geocode: bool) -> T.Union[pd.DataFrame, None]:
+    """
+    Main method for geocoding raw/standardized data.
     Also defines the path logic for geocoding, depending on which columns are available.
     """
+
+    logger = logging.getLogger(__name__)
+
     # Check for empty input
     if input_df is None:
         return None
@@ -309,24 +408,26 @@ def geocode_input_data(
     # If a geoid column is available, just return the df as is
     if "geoid" in df_avail_cols:
         output_geocoded_df = input_df.copy()
+
         # However, standardize geoid column first to avoid merge issues later
-        output_geocoded_df["geoid"] = [
-            str(int(x)).zfill(11) if pd.notna(x) else ""
-            for x in output_geocoded_df["geoid"]
-        ]
+        output_geocoded_df["geoid"] = [str(int(x)).zfill(11) if pd.notna(x) else ""
+                                        for x in output_geocoded_df["geoid"]]
+
     # If a street address is available, use the census geocoder to geocode
     elif "street_address_1" in df_avail_cols:
+
         print(f"\nStarting geocoding of {data_type} data...")
+
         addr_geocoded_df, addr_success_record_count = append_census_geocode_data(
-            input_df, data_type, cache_filepath
-        )
+            input_df, data_type, cache_filepath, mp_geocode)
+
         if addr_geocoded_df is None:
             print("Unable to collect geocode information on dataset")
             return None
-        print(
-            f"\u2713  Address geocoding successfully geocoded",
-            f"{addr_success_record_count / len(input_df) * 100:.1f}% of input records",
-        )
+
+        print(f"\u2713  Address geocoding successfully geocoded",
+            f"{addr_success_record_count / len(input_df) * 100:.1f}% of input records")
+
         # If zip code is also available, use that to geocode the missing records
         if "zip_code" in df_avail_cols:
             print("Using Zip-To-Census-Tract lookup for additional geocoding...")
@@ -339,6 +440,7 @@ def geocode_input_data(
             )
         else:
             output_geocoded_df = addr_geocoded_df.copy()
+
     # If a zip code column is available, use the zip-tract lookup
     elif "zip_code" in df_avail_cols:
         print(f"\nGeocoding {data_type} data with Zip-to-Census-Tract lookup...")
@@ -355,6 +457,7 @@ def geocode_input_data(
     return output_geocoded_df
 
 
+@log_machine
 def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, str]:
     """Given a geocoded dataframe, determine the most likely state, county and city from it."""
     # Check for empty dataframe

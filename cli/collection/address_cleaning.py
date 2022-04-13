@@ -3,7 +3,9 @@ import typing as T
 import numpy as np
 import pandas as pd
 
+from logger_utils import log_machine
 
+@log_machine
 def remove_special_chars(text: str) -> str:
     """Remove special characters from text
     Inputs
@@ -16,6 +18,8 @@ def remove_special_chars(text: str) -> str:
     if not isinstance(text, str):
         print('Non-string text identified, setting field to empty string')
         return str(text)
+
+    text_regex = text
 
     for special_chars in [
         '\\',
@@ -44,9 +48,15 @@ def remove_special_chars(text: str) -> str:
     ]:
         if special_chars in text:
             text = text.replace(special_chars, "")
+
+    # alternate solution
+    import re
+    text_re = re.sub('\W+', '', text_regex)
+
     return text
 
 
+@log_machine
 def get_zipcode5(raw_zipcode: T.Union[int, float, str, None]) -> T.Union[str, None]:
     """Clean up the zip code to convert it to 5-character strings."""
     if pd.isna(raw_zipcode):

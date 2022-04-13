@@ -8,10 +8,13 @@ import numpy as np
 import pandas as pd
 from dateutil.relativedelta import *
 
+from logger_utils import log_machine
+
 # need below to suppress warnings associated with fake geoid code block - unnecessary for production code
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
+@log_machine
 def summarize_housing_loss(
     data_df: pd.DataFrame, pop_df: pd.DataFrame, type: str
 ) -> T.Union[pd.DataFrame, None]:

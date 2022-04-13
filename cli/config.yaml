@@ -1,0 +1,9 @@
+
+logging_level: INFO
+
+input:
+  dir : collection/tests/resources
+
+correlations: false
+mp_geocode : true
+
