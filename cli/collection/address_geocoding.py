@@ -110,9 +110,14 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     geocoded_df = pd.read_csv(
         io.StringIO(r.text), names=GEOCODE_RESPONSE_HEADER, low_memory=False
     )
-    geocoded_df[["long", "lat"]] = (
-        geocoded_df["coordinates"].astype("str").str.split(",", expand=True)
-    )
+    # Split out the lat/long coordinates into different fields, BUT...
+    # First check whether ALL coordinates are empty (i.e., EVERY record in the chunk returned "No Match")
+    if geocoded_df['coordinates'].isna().all():
+        geocoded_df[["long", "lat"]] = [(np.nan, np.nan)] * len(geocoded_df)
+    else:
+        geocoded_df[["long", "lat"]] = (
+            geocoded_df["coordinates"].astype("str").str.split(",", expand=True)
+        )
 
     return geocoded_df
 
