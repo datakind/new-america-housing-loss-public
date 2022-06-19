@@ -112,7 +112,7 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     )
     # Split out the lat/long coordinates into different fields, BUT...
     # First check whether ALL coordinates are empty (i.e., EVERY record in the chunk returned "No Match")
-    if geocoded_df['coordinates'].isna().all():
+    if geocoded_df["coordinates"].isna().all():
         geocoded_df[["long", "lat"]] = [(np.nan, np.nan)] * len(geocoded_df)
     else:
         geocoded_df[["long", "lat"]] = (
@@ -222,7 +222,9 @@ def append_census_geocode_data(
     return output_geocoded_df, success_record_count
 
 
-def zip_to_tract_lookup(zipcode: str, data_year: int = 2020) -> T.List[T.Dict[str, float]]:
+def zip_to_tract_lookup(
+    zipcode: str, data_year: int = 2020
+) -> T.List[T.Dict[str, T.Union[str, float]]]:
     """Retrieve census tract data for a given zipcode using the HUD crosswalk API.
     
     Inputs
@@ -252,14 +254,14 @@ def zip_to_tract_lookup(zipcode: str, data_year: int = 2020) -> T.List[T.Dict[st
 
     response_data = response.json()
     results = response_data["data"]["results"]
-   
+
     return results
-    
+
 
 def get_probabilistic_zip_geoid(
-        lookup_zip: str,
-        zip_geoids_map: T.Dict[str, T.List[T.Dict[str, float]]]
-    ) -> str:
+    lookup_zip: str,
+    zip_geoids_map: T.Dict[str, T.List[T.Dict[str, T.Union[str, float]]]],
+) -> str:
     """Probabilistically look up GEOID for a zipcode.
 
     Inputs
@@ -293,7 +295,7 @@ def get_probabilistic_zip_geoid(
     if zip_results is None:
         return None
     # Loop through the results and when the cumulative sum first exceeds the
-    # generated random number, assign that geoid to that zipcode 
+    # generated random number, assign that geoid to that zipcode
     for idx, result in enumerate(zip_results):
         # Return the last result if we are at that point
         if idx == len(zip_results) - 1:
@@ -326,17 +328,22 @@ def append_zip_to_tract_data(
     # Check which geoids are missing and use zip-tract lookup to fill it in, but create df copy first
     output_geocoded_df = addr_geocode_df.copy()
     # Find which records have missing GEOIDs and get the unique zipcodes in these records
-    missing_geoids_zipcodes =\
-        output_geocoded_df.loc[pd.isna(output_geocoded_df["geoid"])]["zip_code_clean"].unique()
+    missing_geoids_zipcodes = output_geocoded_df.loc[
+        pd.isna(output_geocoded_df["geoid"])
+    ]["zip_code_clean"].unique()
     # Create a zip-geoid map using zip-to-tract lookup
     zip_geoid_map = {
-        lookup_zip: zip_to_tract_lookup(lookup_zip) for lookup_zip in missing_geoids_zipcodes
+        lookup_zip: zip_to_tract_lookup(lookup_zip)
+        for lookup_zip in missing_geoids_zipcodes
     }
     # For missing GEOIDs, fill them in by applying this map to respective zipcodes
-    output_geocoded_df.loc[pd.isna(output_geocoded_df["geoid"]), "geoid"] =\
-        output_geocoded_df.loc[
-            pd.isna(output_geocoded_df["geoid"]), "zip_code_clean"
-        ].apply(get_probabilistic_zip_geoid, args=(zip_geoid_map,))
+    output_geocoded_df.loc[
+        pd.isna(output_geocoded_df["geoid"]), "geoid"
+    ] = output_geocoded_df.loc[
+        pd.isna(output_geocoded_df["geoid"]), "zip_code_clean"
+    ].apply(
+        get_probabilistic_zip_geoid, args=(zip_geoid_map,)
+    )
 
     success_record_count = output_geocoded_df["geoid"].notna().sum()
 
