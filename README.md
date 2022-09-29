@@ -29,6 +29,13 @@ geolocation data.
     3. The `full_datasets` directory contains all eviction/foreclosure geocoded records
     4. The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
 
+# Setup
+
+1. Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) by selecting the installer that fits your OS version. Once it is installed you may have to restart your terminal (closing your terminal and opening again)
+2. `conda env create -f environment.yml` 
+4. `conda activate housing_loss_env` 
+
+
 ## Structure
 
 * `cli/` - code to run the DataKind New America Housing Loss Analysis Tool
