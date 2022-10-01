@@ -12,17 +12,17 @@ Get the FEAT code ...
 2. Click `Code` and `Download Zip` to download the code
 3. Unzip the zip file in the directory of your choice
 
-Then setup the FEAT environment
+Then setup the FEAT environment ...
 
-1Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) by selecting the installer that fits your OS version. Once it is installed you may have to restart your terminal (closing your terminal and opening again)
-2Build your environment:
+1. Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) by selecting the installer that fits your OS version. Once it is installed you may have to restart your terminal (closing your terminal and opening again)
+2. Build your environment:
    - On Mac/Linux: 
-     - Open a terminal and change directory to be where you unzipped the FEAT code `new-america-housing-loss-public`
-     - `conda env create -f environment.yml` 
+     - Open a terminal and change directory to be where you unzipped the FEAT code, `new-america-housing-loss-public`
+     - Run command: `conda env create -f environment.yml` 
    - On Windows: 
-     - In the search box bottom right, search for 'Anaconda prompt' and start it
-     - Change directory to be where you unzipped the FEAT code `new-america-housing-loss-public`
-       - `conda env create -f environment_win.yml`
+     - Run program 'Anaconda prompt' 
+     - In the prompt window, change directory to be where you unzipped the FEAT code, `new-america-housing-loss-public`
+     - RUn command: `conda env create -f environment_win.yml`
 
 # Running FEAT
 
@@ -35,15 +35,20 @@ First, create your input data ...
     - `mortgage_foreclosures.csv` should be saved to `new-america-housing-loss-public/cli/work/mortgage_foreclosures`
     - `tax_lien_foreclosures.csv` should be saved to `new-america-housing-loss-public/cli/work/tax_lien_foreclosures` 
 
+TODO: *I think it would be better to provide sample files already in the work folder, then direct the use to edit extend those, referring to the data documentation sheet*
+
 Then, run FEAT ...
 
-1. Open a terminal and cd into the directory `new-america-housing-loss-public/cli/`
-2. Activate your environment: `conda activate housing_loss_env`
-3. Run the FEAT with your data:
-    1. For Mac/Linux, run `python load_data.py ./work`
-    2. For Windows, run `py load_data.py ./work`
+1. Open a terminal for running FEAT
+   - On Mac/Linux start the Terminal application
+   - On Windows start the 'Anaconda prompt' application
+2. Change directory to sub-directory `cli` of where you installed FEAT
+   - `cd <path to FEAT>/new-america-housing-loss-public/cli`
+3. Run FEAT
+   - On Mac/Linux run command: `python load_data.py ./work`
+   - On Windows run command: `py load_data.py ./work`
     
-The output will be available one level up from your data directory in a folder called `output_data`
+The output will be available in a folder called `output_data`
 
 - The `analysis_plots` directory contains time series and correlation analysis of your content
 - The `data_summaries` directory contains a summary of evictions/foreclosures by geocode (enriched with American Community Survey (ACS) data)
