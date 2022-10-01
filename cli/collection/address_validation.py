@@ -14,7 +14,7 @@ def verify_input_directory(input_path: str) -> T.List:
     directory_contents = [x for x in Path(input_path).iterdir()]
     sub_directories = set(
         [
-            str(f).replace(input_path, '').lower()
+            str(f).split('/')[-1].lower()
             for f in directory_contents
             if f.is_dir()
         ]
@@ -27,7 +27,7 @@ def verify_input_directory(input_path: str) -> T.List:
         print('\u2326  No sub-directories present in input directory')
         return None
     if len(sub_directories.intersection(REQUIRED_SUB_DIRECTORIES)) == 0:
-        print('\u2326  Required sub-directories missing from input directory')
+        print(f'\u2326  Required sub-directories - {REQUIRED_SUB_DIRECTORIES} - missing from input directory')
         return None
     print('\u2713  Required sub-directories found in input directory!')
     return [Path(input_path) / sd for sd in sub_directories]
