@@ -34,6 +34,7 @@ from collection.tigerweb_api import (
 )
 from const import (
     ACS_DATA_DICT_FILENAME,
+    ACS_YEAR,
     GEOCODED_EVICTIONS_FILENAME,
     GEOCODED_FORECLOSURES_FILENAME,
     GEOCODED_TAX_LIENS_FILENAME,
@@ -362,7 +363,7 @@ def main(input_path: str) -> None:
 
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
-    acs_df, acs_data_dict = get_acs_data(state_fips, county_fips)
+    acs_df, acs_data_dict = get_acs_data(state_fips, county_fips, ACS_YEAR)
     if acs_df is None:
         print(
             '\u2326  Insufficient geography information to retrieve ACS Data!',

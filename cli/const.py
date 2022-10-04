@@ -13,12 +13,20 @@ REQUIRED_ADDRESS_COLUMNS = ['street_address_1', 'city', 'state', 'zip_code']
 MIN_YEAR = 2016
 MAX_YEAR = 2999
 
+# The year used to get ACS data
+ACS_YEAR = 2020
+
 GEOCODE_URL = 'https://geocoding.geo.census.gov/geocoder/geographies/addressbatch'
 GEOCODE_PAYLOAD = {
     'benchmark': 'Public_AR_Current',
     'vintage': 'Current_Current',
+    #'benchmark':'Public_AR_Census2020',
+    #'vintage':'Public_AR_Census2020',
     'response': 'json',
 }
+
+#https://geocoding.geo.census.gov/geocoder/vintages?benchmark=Public_AR_Current
+
 GEOCODE_RESPONSE_HEADER = [
     'id',
     'geocoded_address',
