@@ -4,7 +4,6 @@ import os
 import typing as T
 
 from census import Census
-from us import states
 import sys
 
 import pandas as pd
