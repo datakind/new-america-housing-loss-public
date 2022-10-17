@@ -1,0 +1,60 @@
+<html>
+<head>
+    <title>DataKind</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}" crossorigin="anonymous" defer></script>
+    <!-- Favicon -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" />
+</head>
+
+<!-- Google tag (gtag.js)
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-96B23S55BY"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-96B23S55BY');
+</script> -->
+
+<body id="main">
+    
+    <main>
+        <section class="droparea" id="droparea">
+            <div style="padding-top:48px; padding-bottom:24px; justify-content:left; width:33%">
+                <img src="{{ url_for('static', filename='images/DK_LOGO_R_WHT.svg') }}" />
+            </div>
+            <div class="formfields">
+                <form class="my-form">
+                    <p class="largetext" style="justify-content: left;">Drag and Drop CSV files here</p>
+                    <input type="file" id="fileElem" name="files" multiple accept="csv/*" autocomplete="off"
+                        onchange="handleFiles(this.files)" style="background: rgb(149 149 149)">
+                </form>
+                <form method="POST" action="/run_tool">
+                    <input type="button" id="runTool" value="Run Tool" style="background: rgb(194, 189, 189);")">
+                </form>
+            </div>
+        </section>
+        <section id="logger">
+            <h2 style="text-align: center;"></h2>
+            <div class="logging_window" id="loggingwindowid" style="
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+        ">Logging will appear here:
+                <a id="loadtime" style="position: relative;top: -7px;text-align: center;display: grid;"></a>
+                <a id="csvtime" style="position: relative;top: -7px;text-align: center;display: grid;"></a>
+                <pre id="output" style="text-align: center;"></pre>
+            </div>
+            <div id="csvdiv" style="text-align: center;"></div>
+            
+        </section>
+        <section id="loggerphoto" style="display: grid;"></section>
+    </main>
+</body>
+
+</html>

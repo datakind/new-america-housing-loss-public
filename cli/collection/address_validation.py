@@ -19,10 +19,11 @@ def verify_input_directory(input_path: str) -> T.List:
             if f.is_dir()
         ]
     )
-
+    print(directory_contents)
     if len(directory_contents) == 0:
         print('\u2326  Directory is empty!')
         return None
+    print(len(sub_directories))
     if len(sub_directories) == 0:
         print('\u2326  No sub-directories present in input directory')
         return None

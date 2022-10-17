@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import requests
 from tqdm import tqdm
+import sys
 
 # Global Variables
 from const import (
@@ -106,7 +107,7 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
     text_df = df_chunk.to_csv(index=False, header=None)
     files = {"addressFile": ("chunk.csv", text_df, "text/csv")}
     r = requests.post(GEOCODE_URL, files=files, data=GEOCODE_PAYLOAD)
-
+    # print(r.text)
     geocoded_df = pd.read_csv(
         io.StringIO(r.text), names=GEOCODE_RESPONSE_HEADER, low_memory=False
     )
@@ -155,7 +156,7 @@ def census_geocode_full_dataset(
     for chunk in tqdm(
         generate_geocode_chunks(df_geocode_cols),
         desc="Geocoding progress",
-        total=math.ceil(len(df_geocode_cols) / GEOCODE_CHUNK_SIZE),
+        total=math.ceil(len(df_geocode_cols) / GEOCODE_CHUNK_SIZE),file=sys.stdout
     ):
         geocoded_chunk = census_geocode_records(chunk)
         if len(output_df) == 0:
