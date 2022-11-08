@@ -12,9 +12,11 @@ from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIR
 def verify_input_directory(input_path: str) -> T.List:
     """Parse the command line input and determine a directory path."""
     directory_contents = [x for x in Path(input_path).iterdir()]
+    for f in directory_contents:
+        print(f)
     sub_directories = set(
         [
-            str(f).split('/')[-1].lower()
+            str(f).split('//')[1].lower()
             for f in directory_contents
             if f.is_dir()
         ]
@@ -27,7 +29,7 @@ def verify_input_directory(input_path: str) -> T.List:
         print('\u2326  No sub-directories present in input directory')
         return None
     if len(sub_directories.intersection(REQUIRED_SUB_DIRECTORIES)) == 0:
-        print(f'\u2326  Required sub-directories - {REQUIRED_SUB_DIRECTORIES} - missing from input directory')
+        print(f'\u2326  Required sub-directories - {REQUIRED_SUB_DIRECTORIES} - missing from input directory!')
         return None
     print('\u2713  Required sub-directories found in input directory!')
     return [Path(input_path) / sd for sd in sub_directories]
