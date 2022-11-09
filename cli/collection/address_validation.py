@@ -16,7 +16,7 @@ def verify_input_directory(input_path: str) -> T.List:
         print(f)
     sub_directories = set(
         [
-            str(f).split('//')[1].lower()
+            str(f).split('\\')[1].lower()
             for f in directory_contents
             if f.is_dir()
         ]
