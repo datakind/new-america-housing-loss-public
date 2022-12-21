@@ -53,10 +53,11 @@ from const import (
     OUTPUT_PATH_PLOTS_DETAIL,
     OUTPUT_PATH_SUMMARIES,
     TRACT_BOUNDARY_FILENAME,
+    ADDRESS_ERRORS_FILENAME
 )
 
 
-def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
+def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd.DataFrame]:
     """Load evictions data from csv template
     Inputs
     ------
@@ -67,6 +68,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     Outputs
     -------
     cleaned_df: Processed pandas dataframe for next step of geo matching
+    duplicate_nan_df: Addresses that are dropped for being duplicates or nan for record keeping
     """
     for data_dir in sub_directories:
         # If this sub directory does not match the data_category, skip it:
@@ -77,7 +79,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
         # Alert user if there are no files in the relevant subdirectory
         if len(data_files) == 0:
             print('\n\u2326', 'Empty sub directory ', data_dir, ' - nothing to process')
-            return None
+            return None, None
         else:
             print(
                 '\nSubdirectory of ',
@@ -128,7 +130,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 'No readable files found in sub-directory!',
                 'Please make sure input file is CSV.',
             )
-            return None
+            return None, None
         else:
             print(
                 u'\u2713',
@@ -139,6 +141,20 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
         # Drop FULL duplicates
         rows = data.shape[0]
         print('You are starting with ', rows, ' rows in your data set.')
+        # Convert columns names to lowercase and remove any special characters
+        data.columns = [
+            remove_special_chars(col.replace(' ', "_").lower().strip())
+            for col in data.columns
+        ]
+        if 'street_address_1' in data.columns:
+            df_dups_na = data[data.duplicated or data.isna()]
+            df_dups_na['errors'] = 'Duplicate or NA'
+            df_dups_out = df_dups_na[['street_address_1', 'errors']]
+        else:
+            print(
+                'You are missing the required column: street_address_1'
+            )
+            return None, None
         data = data.drop_duplicates().dropna(how="all", axis=0)
         print(
             u'\u2326',
@@ -146,11 +162,6 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
             round(abs(100 * (data.shape[0] - rows) / rows), 1),
             '% of your rows.',
         )
-        # Convert columns names to lowercase and remove any special characters
-        data.columns = [
-            remove_special_chars(col.replace(' ', "_").lower().strip())
-            for col in data.columns
-        ]
 
         print('\nProcessing Date Columns:')
         if data_category == 'evictions':
@@ -181,7 +192,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                     u'\u2326',
                     'Date column not found, please adjust your column headers.',
                 )
-                return None
+                return None, None
         else:
             print(f'\u2713  Process will use {date_column}.')
         # If date column is null, tell user to fix the file
@@ -191,7 +202,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 u'\u2326',
                 'Date column is empty - please ensure date data is included.',
             )
-            return None
+            return None, None
 
         if data[date_column].dtype == object:
             data[date_column] = pd.to_datetime(
@@ -237,14 +248,14 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
         data = data[(data.year >= MIN_YEAR) & (data.year <= MAX_YEAR)]
         print(u'\u2713', 'Data loading complete. Address validation is next.')
 
-        return data
+        return data, df_dups_out
 
     print(
         u'\u2326',
         'No data found in correct format to process. ',
         'Please review FLH Partner Site Data Collection Template!',
     )
-    return None
+    return None, None
 
 
 def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
@@ -292,9 +303,7 @@ def main(input_path: str) -> None:
         df_tax, 'tax lien'
     )
 
-    # print(evic_avail_cols)
-    # print(mort_avail_cols)
-    # print(tax_avail_cols)
+
 
     # CREATE TIME SERIES PLOTS
     plt.rcParams['figure.figsize'] = [25, 10]
