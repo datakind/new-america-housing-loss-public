@@ -371,19 +371,7 @@ def main(input_path: str) -> None:
         state_fips, county_fips, city_str_2, state_str_2 = find_state_county_city(
             df_mort_geocoded_final
         )
-    #Get the exceptions from geocoded data
-    df_evic_errors = None
-    df_mort_errors = None
-    df_tax_errors = None
-    if df_evic_geocoded_final is not None:
-        df_evic_errors = df_evic_geocoded_final[df_evic_geocoded_final['is_match'] == 'No_Match'][['street_address_1', 'city', 'state', 'zip_code', 'is_match']]
-        df_evic_errors.rename(columns = {'is_match': 'errors'}, inplace = True)
-    if df_mort_geocoded_final is not None:
-        df_mort_errors = df_mort_geocoded_final[df_mort_geocoded_final['is_match'] == 'No_Match'][['street_address_1', 'city', 'state', 'zip_code', 'is_match']]
-        df_mort_errors.rename(columns = {'is_match': 'errors'}, inplace = True)
-    if df_tax_geocoded_final is not None:
-        df_tax_errors = df_tax_geocoded_final[df_tax_geocoded_final['is_match'] == 'No_Match'][['street_address_1', 'city', 'state', 'zip_code', 'is_match']]
-        df_tax_errors.rename(columns = {'is_match': 'errors'}, inplace = True)
+
 
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
@@ -411,7 +399,6 @@ def main(input_path: str) -> None:
         )
     
 
-
     ### Grab the renter and home owner total count estimates we'll use
     ### later for housing loss rate calculations
     renter_hhs = acs_df[['GEOID', 'total-renter-occupied-households']].copy()
@@ -425,9 +412,34 @@ def main(input_path: str) -> None:
         columns={'total-owner-occupied-households': 'households_by_geoid'}, inplace=True
     )
 
+    #Get the exceptions from geocoded data- those that done merge with the acs data
+    df_evic_errors = None
+    df_mort_errors = None
+    df_tax_errors = None
+    if df_evic_geocoded_final is not None:
+        geoid_noacs_evic = df_evic_geocoded_final.merge(renter_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
+        geoid_noacs_evic = geoid_noacs_evic[geoid_noacs_evic['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
+        geoid_noacs_evic['errors'] = 'No GeoID match in ACS data'
+        no_geoid_evic = df_evic_geocoded_final[df_evic_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_evic['errors'] = 'No GeoID'
+        df_evic_errors = pd.concat([geoid_noacs_evic, no_geoid_evic])
+    if df_mort_geocoded_final is not None:
+        geoid_noacs_mort = df_mort_geocoded_final.merge(owner_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
+        geoid_noacs_mort = geoid_noacs_mort[geoid_noacs_mort['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
+        geoid_noacs_mort['errors'] = 'No GeoID match in ACS data'
+        no_geoid_mort = df_mort_geocoded_final[df_mort_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_mort['errors'] = 'No GeoID'
+        df_mort_errors = pd.concat([geoid_noacs_mort, no_geoid_mort])
+    if df_tax_geocoded_final is not None:
+        geoid_noacs_tax = df_tax_geocoded_final.merge(owner_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
+        geoid_noacs_tax = geoid_noacs_tax[geoid_noacs_tax['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
+        geoid_noacs_tax['errors'] = 'No GeoID match in ACS data'
+        no_geoid_tax = df_tax_geocoded_final[df_tax_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_tax['errors'] = 'No GeoID'
+        df_tax_errors = pd.concat([geoid_noacs_tax, no_geoid_tax])
+
     # CREATE HOUSING LOSS SUMMARIES
     evic_summ = summarize_housing_loss(df_evic_geocoded_final, renter_hhs, 'evic')
-    write_df_to_disk(evic_summ, summary_write_path / 'evic_summ_test.csv')
     mort_summ = summarize_housing_loss(df_mort_geocoded_final, owner_hhs, 'mort')
     tax_summ = summarize_housing_loss(df_tax_geocoded_final, owner_hhs, 'tax')
 
