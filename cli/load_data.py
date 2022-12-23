@@ -53,7 +53,9 @@ from const import (
     OUTPUT_PATH_PLOTS_DETAIL,
     OUTPUT_PATH_SUMMARIES,
     TRACT_BOUNDARY_FILENAME,
-    ADDRESS_ERRORS_FILENAME
+    EVIC_ADDRESS_ERR_FILENAME,
+    MORT_ADDRESS_ERR_FILENAME,
+    TAX_ADDRESS_ERR_FILENAME
 )
 
 
@@ -146,13 +148,13 @@ def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd
             remove_special_chars(col.replace(' ', "_").lower().strip())
             for col in data.columns
         ]
-        if 'street_address_1' in data.columns:
+        if ('street_address_1' in data.columns and 'city' in data.columns and 'state' in data.columns and 'zip_code' in data.columns):
             df_dups_na = data[data.duplicated or data.isna()]
             df_dups_na['errors'] = 'Duplicate or NA'
-            df_dups_out = df_dups_na[['street_address_1', 'errors']]
+            df_dups_out = df_dups_na[['street_address_1', 'city', 'state', 'zip_code', 'errors']]
         else:
             print(
-                'You are missing the required column: street_address_1'
+                'You are missing one of the following required column: street_address_1, city, state, or zip_code.'
             )
             return None, None
         data = data.drop_duplicates().dropna(how="all", axis=0)
@@ -281,9 +283,9 @@ def main(input_path: str) -> None:
         return "The path provided does not have the expected subdirectory structure."
 
     # LOAD ALL 3 TYPES OF DATA (AS AVAILABLE)
-    df_evic = load_data(sub_directories, 'evictions')
-    df_mort = load_data(sub_directories, 'mortgage_foreclosures')
-    df_tax = load_data(sub_directories, 'tax_lien_foreclosures')
+    df_evic, df_evic_dups = load_data(sub_directories, 'evictions')
+    df_mort, df_mort_dups = load_data(sub_directories, 'mortgage_foreclosures')
+    df_tax, df_tax_dups = load_data(sub_directories, 'tax_lien_foreclosures')
 
     if (df_evic is None) and (df_mort is None) and (df_tax is None):
         print(
@@ -293,13 +295,13 @@ def main(input_path: str) -> None:
         return None
 
     # STANDARDIZE THE INPUT DATA ADDRESSES
-    df_evic_standardized, evic_avail_cols = standardize_input_addresses(
+    df_evic_standardized, df_evic_parse_err, evic_avail_cols = standardize_input_addresses(
         df_evic, 'eviction'
     )
-    df_mort_standardized, mort_avail_cols = standardize_input_addresses(
+    df_mort_standardized, df_mort_parse_err, mort_avail_cols = standardize_input_addresses(
         df_mort, 'foreclosure'
     )
-    df_tax_standardized, tax_avail_cols = standardize_input_addresses(
+    df_tax_standardized, df_tax_parse_err, tax_avail_cols = standardize_input_addresses(
         df_tax, 'tax lien'
     )
 
@@ -369,6 +371,19 @@ def main(input_path: str) -> None:
         state_fips, county_fips, city_str_2, state_str_2 = find_state_county_city(
             df_mort_geocoded_final
         )
+    #Get the exceptions from geocoded data
+    df_evic_errors = None
+    df_mort_errors = None
+    df_tax_errors = None
+    if df_evic_geocoded_final is not None:
+        df_evic_errors = df_evic_geocoded_final[df_evic_geocoded_final['is_match'] == 'No_Match'][['street_address_1', 'city', 'state', 'zip_code', 'is_match']]
+        df_evic_errors.rename(columns = {'is_match': 'errors'}, inplace = True)
+    if df_mort_geocoded_final is not None:
+        df_mort_errors = df_mort_geocoded_final[df_mort_geocoded_final['is_match'] == 'No_Match'][['street_address_1', 'city', 'state', 'zip_code', 'is_match']]
+        df_mort_errors.rename(columns = {'is_match': 'errors'}, inplace = True)
+    if df_tax_geocoded_final is not None:
+        df_tax_errors = df_tax_geocoded_final[df_tax_geocoded_final['is_match'] == 'No_Match'][['street_address_1', 'city', 'state', 'zip_code', 'is_match']]
+        df_tax_errors.rename(columns = {'is_match': 'errors'}, inplace = True)
 
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
@@ -394,6 +409,8 @@ def main(input_path: str) -> None:
             + str(summary_write_path / ACS_DATA_DICT_FILENAME)
             + ' - inspect for ACS variable definitions and reference'
         )
+    
+
 
     ### Grab the renter and home owner total count estimates we'll use
     ### later for housing loss rate calculations
@@ -410,6 +427,7 @@ def main(input_path: str) -> None:
 
     # CREATE HOUSING LOSS SUMMARIES
     evic_summ = summarize_housing_loss(df_evic_geocoded_final, renter_hhs, 'evic')
+    write_df_to_disk(evic_summ, summary_write_path / 'evic_summ_test.csv')
     mort_summ = summarize_housing_loss(df_mort_geocoded_final, owner_hhs, 'mort')
     tax_summ = summarize_housing_loss(df_tax_geocoded_final, owner_hhs, 'tax')
 
@@ -475,6 +493,24 @@ def main(input_path: str) -> None:
     print(
         '*** Created ' + str(summary_write_path / HOUSING_LOSS_SUMMARY_FILENAME) + msg
     )
+
+    #Create summary of the errors and output to file
+    if (df_evic_parse_err is not None or df_evic_errors is not None or df_evic_dups is not None):
+        df_evic_errors = pd.concat([df_evic_parse_err, df_evic_errors, df_evic_dups])
+        write_df_to_disk(
+            df_evic_errors, summary_write_path / EVIC_ADDRESS_ERR_FILENAME
+        )
+    if (df_mort_parse_err is not None or df_mort_errors is not None or df_mort_dups is not None):
+        df_mort_errors = pd.concat([df_mort_parse_err,df_mort_errors, df_mort_dups])
+        write_df_to_disk(
+            df_mort_errors, summary_write_path / MORT_ADDRESS_ERR_FILENAME
+        )
+    if (df_tax_parse_err is not None or df_tax_errors is not None or df_tax_dups is not None):
+        df_tax_errors = pd.concat([df_tax_parse_err, df_tax_errors, df_tax_dups])
+        write_df_to_disk(
+            df_tax_errors, summary_write_path / TAX_ADDRESS_ERR_FILENAME
+        )
+
 
     # Prepare subdirectories to store correlation analysis results
 
