@@ -149,7 +149,7 @@ def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd
             for col in data.columns
         ]
         if ('street_address_1' in data.columns and 'city' in data.columns and 'state' in data.columns and 'zip_code' in data.columns):
-            df_dups_na = data[data.duplicated or data.isna()]
+            df_dups_na = data[data.duplicated or data.isna() or data['street_address_1'].isna()]
             df_dups_na['errors'] = 'Duplicate or NA'
             df_dups_out = df_dups_na[['street_address_1', 'city', 'state', 'zip_code', 'errors']]
         else:
@@ -158,6 +158,8 @@ def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd
             )
             return None, None
         data = data.drop_duplicates().dropna(how="all", axis=0)
+        if ('street_address_1' in data.columns):
+            data = data.dropna(subset=['street_address_1'])
         print(
             u'\u2326',
             'Dropping duplicates and null rows removed ',
