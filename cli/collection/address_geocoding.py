@@ -410,7 +410,7 @@ def geocode_input_data(
     return output_geocoded_df
 
 
-def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, str]:
+def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, list, str, str]:
     """Given a geocoded dataframe, determine the most likely state, county and city from it."""
     # Check for empty dataframe
     if geocoded_df is None:
@@ -430,22 +430,49 @@ def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, 
             only_geo_df["geoid"].str.slice(stop=2).value_counts().index[0]
         )
         most_likely_county_fips = (
-            only_geo_df["geoid"].str.slice(start=2, stop=5).value_counts().index[0]
+            only_geo_df["geoid"].str.slice(start=2, stop=5).value_counts().index.to_list()
         )
+        most_likely_county_fips_str = []
+
+        #check if the items within most_likely_county_fips are numbers
+        #if so, convert to string and pad with 0s
+        for item in most_likely_county_fips:
+            if isinstance(item, (int, float, complex)):
+                #append to number_list
+                str_item = str(int(item)).zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            elif isinstance(item, str):
+                str_item = item.zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            else:
+                most_likely_county_fips_str.append("None")
+
     # Otherwise check if state_fips and county_fips are present in the data
     elif ("state_fips" in geocoded_df.columns) and (
         "county_fips" in geocoded_df.columns
     ):
         # Likely these are raw outputs from the census geocoder and numeric by default
         most_likely_state_fips = geocoded_df["state_fips"].value_counts().index[0]
-        most_likely_county_fips = geocoded_df["county_fips"].value_counts().index[0]
         if isinstance(most_likely_state_fips, (int, float)):
             most_likely_state_fips = str(int(most_likely_state_fips)).zfill(2)
-        if isinstance(most_likely_county_fips, (int, float)):
-            most_likely_county_fips = str(int(most_likely_county_fips)).zfill(3)
+
+        most_likely_county_fips = geocoded_df["county_fips"].value_counts().to_list()
+        most_likely_county_fips_str = []
+        #check if the items within most_likely_county_fips are numbers
+        #if so, convert to string and pad with 0s
+        for item in most_likely_county_fips:
+            if isinstance(item, (int, float, complex)):
+                #append to number_list
+                str_item = str(int(item)).zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            elif isinstance(item, str):
+                str_item = item.zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            else:
+                most_likely_county_fips_str.append("None")
     else:
         most_likely_state_fips = None
-        most_likely_county_fips = None
+        most_likely_county_fips_str = None
 
     # Find the city
     if "city" in geocoded_df.columns:
@@ -461,7 +488,7 @@ def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, 
 
     return (
         most_likely_state_fips,
-        most_likely_county_fips,
+        most_likely_county_fips_str,
         most_likely_city_str,
         most_likely_state_str,
     )

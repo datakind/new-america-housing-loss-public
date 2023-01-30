@@ -377,7 +377,10 @@ def main(input_path: str) -> None:
 
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
-    acs_df, acs_data_dict = get_acs_data(state_fips, county_fips, ACS_YEAR)
+    acs_df = pd.DataFrame()
+    for county in county_fips:
+        acs_df_county, acs_data_dict = get_acs_data(state_fips, str(county), ACS_YEAR)
+        acs_df = pd.concat([acs_df, acs_df_county], axis=0)
     if acs_df is None:
         print(
             '\u2326  Insufficient geography information to retrieve ACS Data!',
@@ -414,7 +417,7 @@ def main(input_path: str) -> None:
         columns={'total-owner-occupied-households': 'households_by_geoid'}, inplace=True
     )
 
-    #Get the exceptions from geocoded data- those that done merge with the acs data
+    #Get the exceptions from geocoded data- those that dont merge with the acs data
     df_evic_errors = None
     df_mort_errors = None
     df_tax_errors = None

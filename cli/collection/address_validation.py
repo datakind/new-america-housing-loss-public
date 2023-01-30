@@ -7,6 +7,9 @@ import scourgify
 from collection.address_cleaning import get_zipcode5
 from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
 
+import debugpy
+
+
 
 # Requires input_path
 def verify_input_directory(input_path: str) -> T.List:

@@ -78,20 +78,23 @@ def rename_baseline(geojson_data, state_code: str, county_code: str) -> str:
 
 
 def get_input_data_geometry(
-    state_fips: str, county_fips: str, geojson_filename: str
+    state_fips: str, county_fips: list, geojson_filename: str
 ) -> T.Union[geopandas.GeoDataFrame, None]:
     """Main function to return geometry data for the input data/partner site."""
     # Check for invalid input
     if state_fips is None or county_fips is None:
         return None
-    # Assemble the request URI and retrieve the data
-    request = create_tigerweb_query(state_fips, county_fips)
-    response = requests.get(str(request))
-    response = rename_baseline(response.json(), state_fips, county_fips)
+    geojson_gdf_output = geopandas.GeoDataFrame()
+    for i in county_fips:
+        # Assemble the request URI and retrieve the data
+        request = create_tigerweb_query(state_fips, i)
+        response = requests.get(str(request))
+        response = rename_baseline(response.json(), state_fips, i)
 
-    # Write the JSON response to a file and read into a geopandas dataframe
-    with open(geojson_filename, 'w') as outfile:
-        json.dump(response, outfile)
-    geojson_gdf = geopandas.read_file(geojson_filename)
+        # Write the JSON response to a file and read into a geopandas dataframe
+        with open(geojson_filename, 'w') as outfile:
+            json.dump(response, outfile)
+        geojson_gdf = geopandas.read_file(geojson_filename)
+        geojson_gdf_output = geojson_gdf_output.append(geojson_gdf)
 
-    return geojson_gdf
+    return geojson_gdf_output
