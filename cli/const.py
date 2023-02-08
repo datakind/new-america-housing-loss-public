@@ -18,10 +18,10 @@ ACS_YEAR = 2020
 
 GEOCODE_URL = 'https://geocoding.geo.census.gov/geocoder/geographies/addressbatch'
 GEOCODE_PAYLOAD = {
-    'benchmark': 'Public_AR_Current',
-    'vintage': 'Current_Current',
-    #'benchmark':'Public_AR_Census2020',
-    #'vintage':'Public_AR_Census2020',
+    #'benchmark': 'Public_AR_Current',
+    #'vintage': 'Current_Current',
+    'benchmark':'Public_AR_Census2020',
+    'vintage':'Census2020_Census2020',
     'response': 'json',
 }
 

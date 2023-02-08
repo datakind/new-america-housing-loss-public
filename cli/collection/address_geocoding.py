@@ -429,11 +429,11 @@ def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, list, str,
         most_likely_state_fips = (
             only_geo_df["geoid"].str.slice(stop=2).value_counts().index[0]
         )
-        most_likely_county_fips = (
-            only_geo_df["geoid"].str.slice(start=2, stop=5).value_counts().index.to_list()
+        all_county_fips = (
+            only_geo_df["geoid"].str.slice(stop=5).value_counts().index.to_list()
         )
         #limit the list to those where the first 2 digits match the state fips
-        most_likely_county_fips = [x for x in most_likely_county_fips if x[:2] == most_likely_state_fips]
+        most_likely_county_fips = [x[2:5] for x in all_county_fips if x[:2] == most_likely_state_fips]
         most_likely_county_fips_str = []
 
         #check if the items within most_likely_county_fips are numbers
@@ -458,9 +458,11 @@ def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, list, str,
         if isinstance(most_likely_state_fips, (int, float)):
             most_likely_state_fips = str(int(most_likely_state_fips)).zfill(2)
 
-        most_likely_county_fips = geocoded_df["county_fips"].value_counts().to_list()
-        #limit to where state_fips matches the most_liekly_state_fips
-        most_likely_county_fips = [x for x in most_likely_county_fips if str(x)[:2] == most_likely_state_fips]
+        all_county_fips = (
+            only_geo_df["geoid"].str.slice(stop=5).value_counts().index.to_list()
+        )
+        #limit the list to those where the first 2 digits match the state fips
+        most_likely_county_fips = [x[2:5] for x in all_county_fips if x[:2] == most_likely_state_fips]
         most_likely_county_fips_str = []
         #check if the items within most_likely_county_fips are numbers
         #if so, convert to string and pad with 0s
