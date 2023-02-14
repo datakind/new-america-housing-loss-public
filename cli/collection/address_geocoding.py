@@ -70,6 +70,7 @@ def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, N
         },
         inplace=True,
     )
+    df_geocode_cols['Unique ID'] = df_geocode_cols['Unique ID'] + 1
     # Ensure the correct order of columns for geocoding input - Incorrect ordering happens if
     # some of the columns are originally missing, the code above just adds them at the end
     correct_column_order = ["Unique ID", "Street address", "City", "State", "ZIP"]
@@ -174,7 +175,7 @@ def census_geocode_full_dataset(
     # If we have a cache available, append to the geocoded data, assuming process resumed
     if cached_df is not None:
         output_df = pd.concat([cached_df, output_df], ignore_index=True)
-
+    output_df['id'] = output_df['id'] - 1
     return output_df
 
 
@@ -197,6 +198,7 @@ def append_census_geocode_data(
     output_geocoded_df = address_df.merge(
         geocoder_data, how="left", left_index=True, right_index=True
     )
+
     # Create a census geoid column
     state_fips = [
         str(int(x)).zfill(2) if pd.notna(x) else ""
