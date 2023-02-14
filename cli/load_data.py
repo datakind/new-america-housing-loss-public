@@ -80,7 +80,7 @@ def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd
         data_files = os.listdir(data_dir)
         # Alert user if there are no files in the relevant subdirectory
         if len(data_files) == 0:
-            print('\n\u2326', 'Empty sub directory ', data_dir, ' - nothing to process')
+            print('\n\u2326', 'Your folder ', data_dir, 'is empty. Please add your', data_category ,'dataset to this folder.')
             return None, None
         else:
             print(
@@ -261,8 +261,9 @@ def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd
 
     print(
         u'\u2326',
-        'No data found in correct format to process. ',
-        'Please review FLH Partner Site Data Collection Template!',
+        'No', data_category, 'sub-folder exists in the folder.',
+        'Please add a', data_category, 'sub-folder.', 
+        'Please review FLH Partner Site Data Collection Template for more details.',
     )
     return None, None
 
@@ -287,7 +288,8 @@ def main(input_path: str) -> None:
     sub_directories = verify_input_directory(input_path)
     # If the input_directory fails, the main function should abort:
     if sub_directories is None:
-        return "The path provided does not have the expected subdirectory structure."
+        return("The path provided does not include the following three folders: evictions, mortgage_foreclosures, and tax_lien_foreclosures. ",
+        'Please add these three files to the folder to proceed')
 
     # LOAD ALL 3 TYPES OF DATA (AS AVAILABLE)
     df_evic, df_evic_dups = load_data(sub_directories, 'evictions')
