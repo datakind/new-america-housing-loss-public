@@ -433,19 +433,19 @@ def main(input_path: str) -> None:
         geoid_noacs_evic = geoid_noacs_evic[geoid_noacs_evic['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
         no_geoid_evic = df_evic_geocoded_final[df_evic_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
         no_geoid_evic['errors'] = 'Unable to find a match in the census geocoder'
-        df_evic_errors = pd.concat([geoid_noacs_evic, no_geoid_evic])
+        df_evic_errors = no_geoid_evic
     if df_mort_geocoded_final is not None:
         geoid_noacs_mort = df_mort_geocoded_final.merge(owner_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
         geoid_noacs_mort = geoid_noacs_mort[geoid_noacs_mort['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
         no_geoid_mort = df_mort_geocoded_final[df_mort_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
         no_geoid_mort['errors'] = 'Unable to find a match in the census geocoder'
-        df_mort_errors = pd.concat([geoid_noacs_mort, no_geoid_mort])
+        df_mort_errors = no_geoid_mort
     if df_tax_geocoded_final is not None:
         geoid_noacs_tax = df_tax_geocoded_final.merge(owner_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
         geoid_noacs_tax = geoid_noacs_tax[geoid_noacs_tax['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
         no_geoid_tax = df_tax_geocoded_final[df_tax_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
         no_geoid_tax['errors'] = 'Unable to find a match in the census geocoder'
-        df_tax_errors = pd.concat([geoid_noacs_tax, no_geoid_tax])
+        df_tax_errors = no_geoid_tax
 
     # CREATE HOUSING LOSS SUMMARIES
     evic_summ = summarize_housing_loss(df_evic_geocoded_final, renter_hhs, 'evic')
