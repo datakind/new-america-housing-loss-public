@@ -70,7 +70,6 @@ def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, N
         },
         inplace=True,
     )
-    df_geocode_cols['Unique ID'] = df_geocode_cols['Unique ID'] + 1
     # Ensure the correct order of columns for geocoding input - Incorrect ordering happens if
     # some of the columns are originally missing, the code above just adds them at the end
     correct_column_order = ["Unique ID", "Street address", "City", "State", "ZIP"]
@@ -124,7 +123,7 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
 
 
 def census_geocode_full_dataset(
-    input_df: pd.DataFrame, data_type: str, cache_filepath: str
+    input_df: pd.DataFrame, data_type: str, cache_filepath: str, cache_off: bool = False
 ) -> T.Union[pd.DataFrame, None]:
     """Given an input dataframe with address data, geocode all the records in it."""
     # Check for error condition
@@ -139,15 +138,16 @@ def census_geocode_full_dataset(
         str(cache_filepath) + "/" + GEOCODER_CACHE_FILE_PREFIX + data_type + ".csv"
     )
 
-    # Check to see if cached data are available; if so, use them
-    cached_df = None
-    if Path(cache_filename).is_file():
-        print("Found cached data, resuming geocoding from the previous cache point...")
-        cached_df = pd.read_csv(cache_filename)
-        # Use the `id` column to find the cached record IDs from the original dataframe
-        cached_ids = cached_df["id"].unique()
-        # Remove those record IDs from the original dataframe and geocode the rest
-        input_df = input_df[~input_df.index.isin(cached_ids)]
+    if cache_off == False:
+        # Check to see if cached data are available; if so, use them
+        cached_df = None
+        if Path(cache_filename).is_file():
+            print("Found cached data, resuming geocoding from the previous cache point...")
+            cached_df = pd.read_csv(cache_filename)
+            # Use the `id` column to find the cached record IDs from the original dataframe
+            cached_ids = cached_df["id"].unique()
+            # Remove those record IDs from the original dataframe and geocode the rest
+            input_df = input_df[~input_df.index.isin(cached_ids)]
 
     # Format the dataframe for geocoding with Census Batch Geocoder API
     df_geocode_cols = format_data_for_geocoding(input_df)
@@ -173,23 +173,24 @@ def census_geocode_full_dataset(
             output_df.to_csv(cache_filename, index=False)
 
     # If we have a cache available, append to the geocoded data, assuming process resumed
-    if cached_df is not None:
-        output_df = pd.concat([cached_df, output_df], ignore_index=True)
-    output_df['id'] = output_df['id'] - 1
+    if cache_off == False:
+            if cached_df is not None:
+                output_df = pd.concat([cached_df, output_df], ignore_index=True)
     return output_df
 
 
 def append_census_geocode_data(
-    address_df: pd.DataFrame, data_type: str, cache_filepath: str
-) -> T.Union[pd.DataFrame, None]:
+    address_df: pd.DataFrame, data_type: str, cache_filepath: str, cache_off: bool = False
+) -> T.Tuple[pd.DataFrame, None, pd.DataFrame]:
     """Append census geocoder data to the dataframe containing raw/standardized addresses."""
     if address_df is None:
-        return None, None
+        return None, None, None
 
     # Geocode all the records and get back the data
-    geocoder_data = census_geocode_full_dataset(address_df, data_type, cache_filepath)
+    geocoder_data = census_geocode_full_dataset(address_df, data_type, cache_filepath, cache_off)
     if geocoder_data.empty:
-        return None, None
+        return None, None, None
+        
     # The return dataframe has an `id` column
     # This is the index of the input dataframe, use it for dedup and joining back
     geocoder_data.drop_duplicates(subset="id", inplace=True)
@@ -221,7 +222,21 @@ def append_census_geocode_data(
     success_record_count = output_geocoded_df["state_fips"].notna().sum()
     # NOTE: Very strange, success rate varies by run... the same record sometimes gets geocoded, sometimes not!
 
-    return output_geocoded_df, success_record_count
+    #return a dataframe with those that failed to geocode
+    if success_record_count < len(output_geocoded_df):
+        failed_geocoding_df = output_geocoded_df[output_geocoded_df["state_fips"].isna()]
+        if data_type == 'eviction':
+            failed_geocoding_df = failed_geocoding_df[['eviction_filing_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        elif data_type == 'foreclosure':
+            failed_geocoding_df = failed_geocoding_df[['foreclosure_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        elif data_type == 'tax lien':
+            failed_geocoding_df = failed_geocoding_df[['tax_lien_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        #drop those that failed to geocode from output_geocoded_df
+        output_geocoded_df = output_geocoded_df[output_geocoded_df["state_fips"].notna()]
+        return output_geocoded_df, success_record_count, failed_geocoding_df
+    
+    else:
+        return output_geocoded_df, success_record_count, None
 
 
 def geocode_input_data(
@@ -246,7 +261,7 @@ def geocode_input_data(
     # If a street address is available, use the census geocoder to geocode
     elif "street_address_1" in df_avail_cols:
         print(f"\nStarting geocoding of {data_type} data...")
-        addr_geocoded_df, addr_success_record_count = append_census_geocode_data(
+        addr_geocoded_df, addr_success_record_count, failed_geocoded_df = append_census_geocode_data(
             input_df, data_type, cache_filepath
         )
         if addr_geocoded_df is None:
@@ -256,6 +271,21 @@ def geocode_input_data(
             f"\u2713  Address geocoding successfully geocoded",
             f"{addr_success_record_count / len(input_df) * 100:.1f}% of input records",
         )
+        #if failed_geocoded_df has rows, try to geocode them again
+        if len(failed_geocoded_df) > 0:
+            addr_geocoded_df2, addr_success_record_count2, failed_geocoded_df2 = append_census_geocode_data(
+                failed_geocoded_df, data_type, cache_filepath, cache_off=True
+            )
+            #append the second geocoded dataframe to the first
+            addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df2], ignore_index=True)
+        
+            if len(failed_geocoded_df2) > 0:
+                addr_geocoded_df3, addr_success_record_count3, failed_geocoded_df3 = append_census_geocode_data(
+                    failed_geocoded_df2, data_type, cache_filepath, cache_off=True
+                )
+                #append the third geocoded dataframe to the first two
+                addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df3, failed_geocoded_df3], ignore_index=True)
+
         output_geocoded_df = addr_geocoded_df.copy()
     else:
         output_geocoded_df = input_df.copy()
