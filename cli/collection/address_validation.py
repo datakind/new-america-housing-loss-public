@@ -170,7 +170,7 @@ def standardize_input_addresses(input_df: pd.DataFrame) -> T.Union[T.Tuple[pd.Da
     # Standardize the addresses using the usaddress-scourgify library
     output_df, df_avail_cols = validate_address_data(input_df)
     if 'street_address_1' in df_avail_cols:
-        print(f"\nStandardizing {data_type} data addresses for geocoding...")
+        print(f"\nStandardizing data addresses for geocoding...")
         df_all_addresses = output_df
         df_all_addresses['street_address_1_clean'] = output_df['street_address_1'].apply(
             get_clean_address
