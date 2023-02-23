@@ -16,23 +16,8 @@ import requests
 from matplotlib import collections
 from matplotlib import pyplot as plt
 
-from analysis.acs_correlation import correlation_analysis
-from analysis.acs_data import get_acs_data
-from analysis.housing_loss_summary import summarize_housing_loss
-from analysis.timeseries import create_timeseries
-from collection.address_cleaning import remove_special_chars
-from collection.address_geocoding import find_state_county_city, geocode_input_data
-from collection.address_validation import (
-    standardize_input_addresses,
-    validate_address_data,
-    verify_input_directory,
-)
-from collection.tigerweb_api import (
-    create_tigerweb_query,
-    get_input_data_geometry,
-    jprint,
-    rename_baseline,
-)
+from load_data import main as load_data
+
 from const import (
     ACS_DATA_DICT_FILENAME,
     ACS_YEAR,
@@ -64,5 +49,69 @@ def main(input_path: str) -> None:
     cities = requests.get("https://evictionlab.org/uploads/all_sites_monthly_2020_2021.csv")
     city_content = cities.content
     #put into dataframe
-    city_df = pd.read_csv(io.StringIO(city_content.decode('utf-8')))
+    evictions = pd.read_csv(io.StringIO(city_content.decode('utf-8')))
+
+    #drop if city is NaN
+    evictions = evictions.dropna(subset=['city'])
+    #split city and state
+    evictions[['city', 'state']] = evictions['city'].str.split(',', expand=True)
+
+    #removing sealed GeoID records 
+    evictions=evictions[evictions.GEOID != 'sealed']
+
+    #reformatting the date 
+    evictions['temp_month'] = evictions['month'].str[:3]
+    evictions['temp_year'] = evictions['month'].str[-5:]
+    evictions['Eviction_Filing_Date'] = evictions.temp_month.str.cat(evictions.temp_year, sep='01')
+
+    #dropping unnecessary columns
+    evictions = evictions.drop('temp_month', axis=1)
+    evictions = evictions.drop('temp_year', axis=1)
+
+    #adding required blank columns 
+    evictions[['Street_Address_1', 'County', 'zip_code']] = ['1 main street', '', 99999]
+
+    #checking total number of non-sealed evictions
+    print(f"Total number of evictions: {evictions['filings_2020'].sum()}")
+
+    #disaggregating data
+    evictions=evictions.reindex(evictions.index.repeat(evictions.filings_2020))
+
+    #checking length of dataframe it should equal the total number of evictions
+    print(f"Length of the disaggregated dataframe: {len(evictions)}")
+
+    #dropping total number of evictions 
+    evictions = evictions.drop('filings_2020', axis=1)
+
+    #Converting date column to string 
+    evictions = evictions.astype({'Eviction_Filing_Date':'string'})
+    evictions['ID'] = np.arange(len(evictions))
+
+    #create a folder called ets_data if there is not one already
+    if not os.path.exists('ets_data'):
+        os.makedirs('ets_data')
+
+    #loop through the cities
+    for city in evictions['city'].unique():
+
+        #create a folder for the city if there is not one already 
+        if not os.path.exists('ets_data/' + city):
+            os.makedirs('ets_data/' + city)
+
+        #create evictions, foreclosures, and tax liens folders if there are not already
+        if not os.path.exists('ets_data/' + city + '/evictions'):
+            os.makedirs('ets_data/' + city + '/evictions')
+        if not os.path.exists('ets_data/' + city + '/mortgage_foreclosures'):
+            os.makedirs('ets_data/' + city + '/mortgage_foreclosures')
+        if not os.path.exists('ets_data/' + city + '/tax_lien_foreclosures'):
+            os.makedirs('ets_data/' + city + '/tax_lien_foreclosures')
+
+        #save the evictions data to the evictions folder
+        evictions.to_csv('ets_data/' + city + '/evictions/evictions.csv', index=False)
+
+    #loop through the cities
+    for city in evictions['city'].unique():
+        #call load_data with the new evictions file
+        load_data('ets_data/' + city + '/')
+
     return None
