@@ -59,213 +59,143 @@ from const import (
 )
 
 
-def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd.DataFrame]:
+def load_data(input_path) -> T.Tuple[pd.DataFrame,pd.DataFrame]:
     """Load evictions data from csv template
     Inputs
     ------
-    sub_directories: list of sub-directories
-    data_category: 'evictions', 'mortgage_foreclosures', 'tax_lien_foreclosures'
-    parameters: If necessary, parameters to determine narrow down timeframe
-      or columns of evictions data to return
+    input_path: Path to the input data file
+
     Outputs
     -------
     cleaned_df: Processed pandas dataframe for next step of geo matching
     duplicate_nan_df: Addresses that are dropped for being duplicates or nan for record keeping
     """
-    for data_dir in sub_directories:
-        # If this sub directory does not match the data_category, skip it:
-        if data_category not in str(data_dir):
-            continue
-        # If this is right subdirectory, list the files in the directory
-        data_files = os.listdir(data_dir)
-        # Alert user if there are no files in the relevant subdirectory
-        if len(data_files) == 0:
-            print('\n\u2326', 'Your folder ', data_dir, 'is empty. Please add your', data_category ,'dataset to this folder.')
-            return None, None
+
+    # Create empty dataframe to hold data
+    data = pd.DataFrame()
+    # Loop through the file
+    for f in input_path:
+        print('Loading file: ', f)
+        # Read in file depending on file format
+        if str(f.lower()).endswith('.csv'):
+            print(u'\u2713', 'File type: .csv')
+            df = pd.read_csv(f, low_memory=False)
+            print('First row of data:\n', df.iloc[0, :])
+        elif str(f.lower()).endswith(('.xls', '.xlsx')):
+            print(u'\u2713', 'File type: .xls or .xlsx')
+            df = pd.read_excel(f)
+            print(u'\u2713', 'First row of data:\n', df.iloc[0, :])
         else:
-            print(
-                '\nSubdirectory of ',
-                data_dir,
-                ' has ',
-                len(data_files),
-                ' files in it: ',
-                data_files,
-            )
-        data = pd.DataFrame()
-        # Loop through the files
-        for f in data_files:
-            print('Loading file: ', f, ' of ', data_files)
-            # Read in file depending on file format
-            if str(f.lower()).startswith(data_category):
-                if str(f.lower()).endswith('.csv'):
-                    print(u'\u2713', 'File type: .csv')
-                    df = pd.read_csv(data_dir / f, low_memory=False)
-                    print('First row of data:\n', df.iloc[0, :])
-                elif str(f.lower()).endswith(('.xls', '.xlsx')):
-                    print(u'\u2713', 'File type: .xls or .xlsx')
-                    df = pd.read_excel(data_dir / f)
-                    print(u'\u2713', 'First row of data:\n', df.iloc[0, :])
-                else:
-                    print(f'Invalid file detected {str(f)}')
-            else:
-                # Let user know about invalid files
-                print(
-                    u'\u2326',
-                    'A file that was not labeled as ',
-                    data_category,
-                    ' was found and will be ignored.',
-                )
-                print(
-                    u'\u2326',
-                    'Please name each type of file according to the guidelines.',
-                )
-                continue
-            # Join multiple files together if there are multple, otherwise move on
-            if len(df) == 0:
-                data = df
-            else:
-                data = pd.concat([data, df], ignore_index=True)
-        # No files with readable extensions
-        if len(data) == 0:
-            print(
-                u'\u2326',
-                'No readable files found in sub-directory!',
-                'Please make sure input file is CSV.',
-            )
-            return None, None
-        else:
-            print(
-                u'\u2713',
-                'You have at least one data file to process of type: ',
-                data_category,
-            )
-        print('\nProcessing duplicate and empty rows:')
-        # Drop FULL duplicates
-        rows = data.shape[0]
-        print('You are starting with ', rows, ' rows in your data set.')
-        # Convert columns names to lowercase and remove any special characters
-        data.columns = [
-            remove_special_chars(col.replace(' ', "_").lower().strip())
-            for col in data.columns
-        ]
-        if ('street_address_1' in data.columns and 'city' in data.columns and 'state' in data.columns and 'zip_code' in data.columns):
-           #select records that na for street_address_1 or all fields as df_dups_na
-            df_dups_na = data[data['street_address_1'].isna()]
-            df_dups_dups = data[data.duplicated]
-            df_dups_na['errors'] = 'NA'
-            df_dups_dups['errors'] = 'Duplicate'
-            df_dups_out_na = df_dups_na[['street_address_1','city', 'state', 'zip_code', 'errors']]
-            df_dups_out_dups = df_dups_dups[['street_address_1', 'city', 'state', 'zip_code', 'errors']]
-            df_dups_out = pd.concat([df_dups_out_na, df_dups_out_dups])
-        else:
-            print(
-                'You are missing one of the following required column: street_address_1, city, state, or zip_code.'
-            )
-            return None, None
-        data = data.drop_duplicates().dropna(how="all", axis=0)
-        if ('street_address_1' in data.columns):
-            data = data.dropna(subset=['street_address_1'])
+            print(f'Invalid file detected {str(f)}')
+        data = df 
+        
+    # No files with readable extensions
+    if len(data) == 0:
         print(
             u'\u2326',
-            'Dropping duplicates and null rows removed ',
-            round(abs(100 * (data.shape[0] - rows) / rows), 1),
-            '% of your rows.',
+            'File is not readable!',
+            'Please make sure input file is CSV or xls or xlsx.',
         )
-
-        print('\nProcessing Date Columns:')
-        if data_category == 'evictions':
-            date_column = 'eviction_filing_date'
-        elif data_category == 'mortgage_foreclosures':
-            date_column = 'foreclosure_sale_date'
-        elif data_category == 'tax_lien_foreclosures':
-            date_column = 'tax_lien_sale_date'
-        # Check to see if they have the correct date column
-        # but otherwise use the first 'date' column found:
-        has_date_column = date_column in data.columns
-        if not has_date_column:
-            print(u'\u2326', 'Expected date column is missing in the input file')
-            date_columns_found = [
-                item for item in data.columns if 'date' in item.lower()
-            ]
-            if len(date_columns_found) > 0:
-                print(
-                    u'\u2713',
-                    'Process will use ',
-                    date_columns_found[0],
-                    ' as the ',
-                    date_column,
-                )
-                data[date_column] = data[date_columns_found[0]].copy()
-            else:
-                print(
-                    u'\u2326',
-                    'Date column not found, please adjust your column headers.',
-                )
-                return None, None
-        else:
-            print(f'\u2713  Process will use {date_column}.')
-        # If date column is null, tell user to fix the file
-
-        if data[date_column].isnull().all():
-            print(
-                u'\u2326',
-                'Date column is empty - please ensure date data is included.',
-            )
-            return None, None
-
-        if data[date_column].dtype == object:
-            data[date_column] = pd.to_datetime(
-                data[date_column], infer_datetime_format=True
-            )
-        # Deal with null dates
-        if data[date_column].isnull().sum() / data.shape[0] > 0.25:
-            print(
-                'The percent of the date column that is null is: ',
-                round(100 * data[date_column].isnull().sum() / data.shape[0], 1),
-                '%, which can negatively affect the time-series analysis.',
-            )
-
-        data[date_column] = pd.to_datetime(data[date_column])
-        data[date_column] = data[date_column].fillna(method='ffill')
-        print(f'\nFiltering data to only >= {MIN_YEAR} values:')
-        # Create year and month columns for later aggregation
-        data['year'] = data[date_column].dt.year.astype(int)
-        data['month'] = data[date_column].dt.to_period('M').astype(str)
+        return None, None
+    
+    print('\nProcessing duplicate and empty rows:')
+    # Drop FULL duplicates
+    rows = data.shape[0]
+    print('You are starting with ', rows, ' rows in your data set.')
+    # Convert columns names to lowercase and remove any special characters
+    data.columns = [
+        remove_special_chars(col.replace(' ', "_").lower().strip())
+        for col in data.columns
+    ]
+    if ('street_address_1' in data.columns and 'city' in data.columns and 'state' in data.columns and 'zip_code' in data.columns and 'type' in data.columns):
+        #select records that na for street_address_1 or all fields as df_dups_na
+        df_dups_na = data[data['street_address_1'].isna()]
+        df_dups_dups = data[data.duplicated]
+        df_dups_na['errors'] = 'NA'
+        df_dups_dups['errors'] = 'Duplicate'
+        df_dups_out_na = df_dups_na[['street_address_1','city', 'state', 'zip_code', 'errors', 'type']]
+        df_dups_out_dups = df_dups_dups[['street_address_1', 'city', 'state', 'zip_code', 'errors', 'type']]
+        df_dups_out = pd.concat([df_dups_out_na, df_dups_out_dups])
+    else:
         print(
-            u'\u2713',
-            'Data date range is from ',
-            data[date_column].dt.date.min(),
-            ' to ',
-            data[date_column].dt.date.max(),
+            'You are missing one of the following required column: street_address_1, city, state, zip_code, or type.'
         )
-        # Let user know how much older data will be be discarded
-        if data.year.min() < MIN_YEAR:
-            print(
-                u'\u2326',
-                'Data before',
-                MIN_YEAR,
-                'represents',
-                round(
-                    100
-                    * data[(data.year < MIN_YEAR) | (data.year > MAX_YEAR)].shape[0]
-                    / data.shape[0],
-                    1,
-                ),
-                '% of data and cannot be used in this analysis.',
-            )
-        print(u'\u2713', 'Date column has been processed.\n')
-        data = data[(data.year >= MIN_YEAR) & (data.year <= MAX_YEAR)]
-        print(u'\u2713', 'Data loading complete. Address validation is next.')
-
-        return data, df_dups_out
-
+        return None, None
+    data = data.drop_duplicates().dropna(how="all", axis=0)
+    if ('street_address_1' in data.columns):
+        data = data.dropna(subset=['street_address_1'])
     print(
         u'\u2326',
-        'No', data_category, 'sub-folder exists in the folder.',
-        'Please add a', data_category, 'sub-folder.', 
-        'Please review FLH Partner Site Data Collection Template for more details.',
+        'Dropping duplicates and null rows removed ',
+        round(abs(100 * (data.shape[0] - rows) / rows), 1),
+        '% of your rows.',
     )
-    return None, None
+
+    print('\nProcessing Date Column:')
+    date_column = 'date'
+    # Check to see if they have the correct date column
+    has_date_column = date_column in data.columns
+    if not has_date_column:
+        print(
+            u'\u2326',
+            'Date column not found, please adjust your column headers.',
+        )
+        return None, None
+
+    # If date column is null, tell user to fix the file
+    if data[date_column].isnull().all():
+        print(
+            u'\u2326',
+            'Date column is empty - please ensure date data is included.',
+        )
+        return None, None
+
+    # If date column is not a datetime object, try to convert it
+    if data[date_column].dtype == object:
+        data[date_column] = pd.to_datetime(
+            data[date_column], infer_datetime_format=True
+        )
+    # Deal with null dates
+    if data[date_column].isnull().sum() / data.shape[0] > 0.25:
+        print(
+            'The percent of the date column that is null is: ',
+            round(100 * data[date_column].isnull().sum() / data.shape[0], 1),
+            '%, which can negatively affect the time-series analysis.',
+        )
+
+    data[date_column] = pd.to_datetime(data[date_column])
+    data[date_column] = data[date_column].fillna(method='ffill')
+    print(f'\nFiltering data to only >= {MIN_YEAR} values:')
+    # Create year and month columns for later aggregation
+    data['year'] = data[date_column].dt.year.astype(int)
+    data['month'] = data[date_column].dt.to_period('M').astype(str)
+    print(
+        u'\u2713',
+        'Data date range is from ',
+        data[date_column].dt.date.min(),
+        ' to ',
+        data[date_column].dt.date.max(),
+    )
+    # Let user know how much older data will be be discarded
+    if data.year.min() < MIN_YEAR:
+        print(
+            u'\u2326',
+            'Data before',
+            MIN_YEAR,
+            'represents',
+            round(
+                100
+                * data[(data.year < MIN_YEAR) | (data.year > MAX_YEAR)].shape[0]
+                / data.shape[0],
+                1,
+            ),
+            '% of data and cannot be used in this analysis.',
+        )
+    print(u'\u2713', 'Date column has been processed.\n')
+    data = data[(data.year >= MIN_YEAR) & (data.year <= MAX_YEAR)]
+    print(u'\u2713', 'Data loading complete. Address validation is next.')
+
+    return data, df_dups_out
 
 
 def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
@@ -284,37 +214,19 @@ def main(input_path: str) -> None:
 
     It takes in the input data path as an argument
     """
-    # LOOK FOR CORRECT SUBDIRECTORY STRUCTURE
-    sub_directories = verify_input_directory(input_path)
-    # If the input_directory fails, the main function should abort:
-    if sub_directories is None:
-        return("The path provided does not include the following three folders: evictions, mortgage_foreclosures, and tax_lien_foreclosures. ",
-        'Please add these three files to the folder to proceed')
 
-    # LOAD ALL 3 TYPES OF DATA (AS AVAILABLE)
-    df_evic, df_evic_dups = load_data(sub_directories, 'evictions')
-    df_mort, df_mort_dups = load_data(sub_directories, 'mortgage_foreclosures')
-    df_tax, df_tax_dups = load_data(sub_directories, 'tax_lien_foreclosures')
+    # LOAD the data
+    df, df_dups = load_data(input_path)
 
-    if (df_evic is None) and (df_mort is None) and (df_tax is None):
+    if (df is None):
         print(
             'No data files matched our requirements for this analysis.'
-            'Please check the files and restart.'
+            'Please check the file and restart.'
         )
         return None
 
     # STANDARDIZE THE INPUT DATA ADDRESSES
-    df_evic_standardized, df_evic_parse_err, evic_avail_cols = standardize_input_addresses(
-        df_evic, 'eviction'
-    )
-    df_mort_standardized, df_mort_parse_err, mort_avail_cols = standardize_input_addresses(
-        df_mort, 'foreclosure'
-    )
-    df_tax_standardized, df_tax_parse_err, tax_avail_cols = standardize_input_addresses(
-        df_tax, 'tax lien'
-    )
-
-
+    df_evic_standardized, df_evic_parse_err, evic_avail_cols = standardize_input_addresses(df)
 
     # CREATE TIME SERIES PLOTS
     plt.rcParams['figure.figsize'] = [25, 10]

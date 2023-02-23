@@ -11,31 +11,6 @@ import debugpy
 
 
 
-# Requires input_path
-def verify_input_directory(input_path: str) -> T.List:
-    """Parse the command line input and determine a directory path."""
-    directory_contents = [x for x in Path(input_path).iterdir()]
-    sub_directories = set(
-        [
-            str(f).replace(input_path, '').lower()
-            for f in directory_contents
-            if f.is_dir()
-        ]
-    )
-
-    if len(directory_contents) == 0:
-        print('\u2326  Directory is empty!')
-        return None
-    if len(sub_directories) == 0:
-        print('\u2326  No sub-directories present in input directory')
-        return None
-    if len(sub_directories.intersection(REQUIRED_SUB_DIRECTORIES)) == 0:
-        print('\u2326  Required sub-directories missing from input directory')
-        return None
-    print('\u2713  Required sub-directories found in input directory!')
-    return [Path(input_path) / sd for sd in sub_directories]
-
-
 def search_dataframe_column(
     df_to_search: pd.DataFrame, col_to_find: str, alt_col_name: str
 ) -> T.Tuple[bool, T.Union[str, None]]:
@@ -76,7 +51,7 @@ def search_dataframe_column(
     return found_column, use_alt_column
 
 
-def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
+def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
     """Validates and cleans the address data
     Creates indicator variables to assign GEOIDs
     Inputs
@@ -205,14 +180,12 @@ def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
         return f'ERROR parsing address "{input_address}": {e}'
 
 
-def standardize_input_addresses(
-    input_df: pd.DataFrame, data_type: str
-) -> T.Union[T.Tuple[pd.DataFrame, pd.DataFrame, list], T.Tuple[None, None, None]]:
+def standardize_input_addresses(input_df: pd.DataFrame) -> T.Union[T.Tuple[pd.DataFrame, pd.DataFrame, list], T.Tuple[None, None, None]]:
     """Standardize the address column(s) and the ZIP code in a dataframe."""
     if input_df is None:
         return (None, None, None)
     # Standardize the addresses using the usaddress-scourgify library
-    output_df, df_avail_cols = validate_address_data(input_df, data_type)
+    output_df, df_avail_cols = validate_address_data(input_df)
     if 'street_address_1' in df_avail_cols:
         print(f"\nStandardizing {data_type} data addresses for geocoding...")
         df_all_addresses = output_df
