@@ -65,7 +65,7 @@ def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
     # Converting all column names to lowercase
     data.columns = [col.lower() for col in data.columns]
     # Checking for required address columns (even if the columns are empty):
-    print(f"\nProcessing address columns for {data_type} data:")
+    print(f"\nProcessing address columns for data:")
     has_address_columns = set(REQUIRED_ADDRESS_COLUMNS).issubset(set(data.columns))
     if has_address_columns:
         print(u'\u2713', 'Data has all the required column headings for addresses.')
@@ -107,7 +107,6 @@ def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
     # DETERMINE WHICH GEOID MATCHING METHOD WILL BE PRIMARY METHOD
     data['use_geoid'] = 0
     data['use_street'] = 0
-    data['use_zip'] = 0
     method = []
     # Set dictionary to determine which address to clean/use for matching
     if avail_columns['has_geoid']:
@@ -123,9 +122,6 @@ def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
     if avail_columns['has_street_address_1'] and avail_columns['has_zip_code']:
         data['use_street'] = 1
         method.append('Street Address with Zip matching')
-    if avail_columns['has_zip_code']:
-        data['use_zip'] = 1
-        method.append('Zip to Census Tract method')
 
     print(
         'Based on the available address data,'
@@ -133,20 +129,7 @@ def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
         method,
     )
 
-    # Remember which date_column we have in this data:
-    if 'eviction_filing_date' in data.columns:
-        print('\u2713', 'Has eviction filing date column')
-        date_column = 'eviction_filing_date'
-    elif 'foreclosure_sale_date' in data.columns:
-        print('\u2713', 'Has foreclosure sale date column')
-        date_column = 'foreclosure_sale_date'
-    elif 'tax_lien_sale_date' in data.columns:
-        print('\u2713', 'Has tax lien sale date column')
-        date_column = 'tax_lien_sale_date'
-    else:
-        date_columns = [item for item in data.columns if 'date' in item.lower()]
-        date_column = date_columns[0]
-
+    date_column = "date"
     columns_to_return = [date_column, 'year', 'month'] + usable_address_cols
 
     data = data.loc[
