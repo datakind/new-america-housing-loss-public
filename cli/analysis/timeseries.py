@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 
 def create_timeseries(
-    input_df: pd.DataFrame, date_column: str, series_label: str
+    input_df: pd.DataFrame, date_column: str, type_variable: str
 ) -> T.Union[T.Tuple[collections.PathCollection, str], T.Tuple[None, None]]:
     """Plot time series counts of the different data types (eviction, foreclosure, etc.)."""
 
@@ -55,7 +55,7 @@ def create_timeseries(
 
     # fig = plt.figure()
     # fig.set_size_inches(9, 6.5)
-    s = plt.scatter(results_df.index, results_df.mysum, s=100, label=series_label)
+    s = plt.scatter(results_df.index, results_df.mysum, s=100, label=type_variable)
     plt.plot(results_df.index, results_df.mysum)
 
     # plot_title = series_label + ' timeseries'

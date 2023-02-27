@@ -87,6 +87,7 @@ def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
         'Parcel_ID': 'TAXPIN',
         'Latitude': 'YC',
         'Longitude': 'XC',
+        'Type': 'Type',
     }
     # Initialize some variables
     avail_columns = {'has_' + col.lower(): False for col in search_col_dict.keys()}

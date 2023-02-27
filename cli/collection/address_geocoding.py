@@ -225,12 +225,7 @@ def append_census_geocode_data(
     #return a dataframe with those that failed to geocode
     if success_record_count < len(output_geocoded_df):
         failed_geocoding_df = output_geocoded_df[output_geocoded_df["state_fips"].isna()]
-        if data_type == 'eviction':
-            failed_geocoding_df = failed_geocoding_df[['eviction_filing_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
-        elif data_type == 'foreclosure':
-            failed_geocoding_df = failed_geocoding_df[['foreclosure_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
-        elif data_type == 'tax lien':
-            failed_geocoding_df = failed_geocoding_df[['tax_lien_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        failed_geocoding_df = failed_geocoding_df[['date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
         #drop those that failed to geocode from output_geocoded_df
         output_geocoded_df = output_geocoded_df[output_geocoded_df["state_fips"].notna()]
         return output_geocoded_df, success_record_count, failed_geocoding_df
@@ -287,6 +282,7 @@ def geocode_input_data(
                 addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df3, failed_geocoded_df3], ignore_index=True)
 
         output_geocoded_df = addr_geocoded_df.copy()
+        output_geocoded_df['data_type'] = data_type
     else:
         output_geocoded_df = input_df.copy()
 
