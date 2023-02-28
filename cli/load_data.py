@@ -110,7 +110,7 @@ def load_data(input_path) -> T.Tuple[pd.DataFrame,pd.DataFrame]:
     if ('street_address_1' in data.columns and 'city' in data.columns and 'state' in data.columns and 'zip_code' in data.columns and 'type' in data.columns):
         #select records that na for street_address_1 or all fields as df_dups_na
         df_dups_na = data[data['street_address_1'].isna()]
-        df_dups_dups = data[data.duplicated]
+        df_dups_dups = data[data.duplicated()]
         df_dups_na['errors'] = 'NA'
         df_dups_dups['errors'] = 'Duplicate'
         df_dups_out_na = df_dups_na[['street_address_1','city', 'state', 'zip_code', 'errors', 'type']]
