@@ -16,7 +16,8 @@ def jprint(obj):
 # 2. Retrieving all census tracts for the given county
 def create_tigerweb_query(state_code: str, county_code: str) -> str:
     # Create an API call with the input state and county code
-    base_uri = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2019/MapServer/8/query?where="
+    base_uri = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2020/MapServer/6/query?where="
+    #base_uri = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2019/MapServer/8/query?where="
     connector = f"STATE%3D%27{state_code}%27+AND+COUNTY%3D%27{county_code}%27"
     end_uri = "&text=&objectIds=&time=&geometry=&geometryType=esriGeometryPolygon&inSR=&spatialRel=esriSpatialRelIntersects&distance=&units=esriSRUnit_Foot&relationParam=&outFields=&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=&outSR=&havingClause=&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&historicMoment=&returnDistinctValues=false&resultOffset=&resultRecordCount=&returnExtentOnly=false&datumTransformation=&parameterValues=&rangeValues=&quantizationParameters=&featureEncoding=esriDefault&f=geojson"
 
@@ -78,20 +79,23 @@ def rename_baseline(geojson_data, state_code: str, county_code: str) -> str:
 
 
 def get_input_data_geometry(
-    state_fips: str, county_fips: str, geojson_filename: str
+    state_fips: str, county_fips: list, geojson_filename: str
 ) -> T.Union[geopandas.GeoDataFrame, None]:
     """Main function to return geometry data for the input data/partner site."""
     # Check for invalid input
     if state_fips is None or county_fips is None:
         return None
-    # Assemble the request URI and retrieve the data
-    request = create_tigerweb_query(state_fips, county_fips)
-    response = requests.get(str(request))
-    response = rename_baseline(response.json(), state_fips, county_fips)
+    geojson_gdf_output = geopandas.GeoDataFrame()
+    for i in county_fips:
+        # Assemble the request URI and retrieve the data
+        request = create_tigerweb_query(state_fips, i)
+        response = requests.get(str(request))
+        response = rename_baseline(response.json(), state_fips, i)
 
-    # Write the JSON response to a file and read into a geopandas dataframe
-    with open(geojson_filename, 'w') as outfile:
-        json.dump(response, outfile)
-    geojson_gdf = geopandas.read_file(geojson_filename)
+        # Write the JSON response to a file and read into a geopandas dataframe
+        with open(geojson_filename, 'w') as outfile:
+            json.dump(response, outfile)
+        geojson_gdf = geopandas.read_file(geojson_filename)
+        geojson_gdf_output = geojson_gdf_output.append(geojson_gdf)
 
-    return geojson_gdf
+    return geojson_gdf_output

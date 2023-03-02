@@ -53,10 +53,13 @@ from const import (
     OUTPUT_PATH_PLOTS_DETAIL,
     OUTPUT_PATH_SUMMARIES,
     TRACT_BOUNDARY_FILENAME,
+    EVIC_ADDRESS_ERR_FILENAME,
+    MORT_ADDRESS_ERR_FILENAME,
+    TAX_ADDRESS_ERR_FILENAME
 )
 
 
-def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
+def load_data(sub_directories: T.List, data_category) -> T.Tuple[pd.DataFrame,pd.DataFrame]:
     """Load evictions data from csv template
     Inputs
     ------
@@ -67,6 +70,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
     Outputs
     -------
     cleaned_df: Processed pandas dataframe for next step of geo matching
+    duplicate_nan_df: Addresses that are dropped for being duplicates or nan for record keeping
     """
     for data_dir in sub_directories:
         # If this sub directory does not match the data_category, skip it:
@@ -76,8 +80,8 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
         data_files = os.listdir(data_dir)
         # Alert user if there are no files in the relevant subdirectory
         if len(data_files) == 0:
-            print('\n\u2326', 'Empty sub directory ', data_dir, ' - nothing to process')
-            return None
+            print('\n\u2326', 'Your folder ', data_dir, 'is empty. Please add your', data_category ,'dataset to this folder.')
+            return None, None
         else:
             print(
                 '\nSubdirectory of ',
@@ -128,7 +132,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 'No readable files found in sub-directory!',
                 'Please make sure input file is CSV.',
             )
-            return None
+            return None, None
         else:
             print(
                 u'\u2713',
@@ -139,18 +143,34 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
         # Drop FULL duplicates
         rows = data.shape[0]
         print('You are starting with ', rows, ' rows in your data set.')
+        # Convert columns names to lowercase and remove any special characters
+        data.columns = [
+            remove_special_chars(col.replace(' ', "_").lower().strip())
+            for col in data.columns
+        ]
+        if ('street_address_1' in data.columns and 'city' in data.columns and 'state' in data.columns and 'zip_code' in data.columns):
+           #select records that na for street_address_1 or all fields as df_dups_na
+            df_dups_na = data[data['street_address_1'].isna()]
+            df_dups_dups = data[data.duplicated()]
+            df_dups_na['errors'] = 'NA'
+            df_dups_dups['errors'] = 'Duplicate'
+            df_dups_out_na = df_dups_na[['street_address_1','city', 'state', 'zip_code', 'errors']]
+            df_dups_out_dups = df_dups_dups[['street_address_1', 'city', 'state', 'zip_code', 'errors']]
+            df_dups_out = pd.concat([df_dups_out_na, df_dups_out_dups])
+        else:
+            print(
+                'You are missing one of the following required column: street_address_1, city, state, or zip_code.'
+            )
+            return None, None
         data = data.drop_duplicates().dropna(how="all", axis=0)
+        if ('street_address_1' in data.columns):
+            data = data.dropna(subset=['street_address_1'])
         print(
             u'\u2326',
             'Dropping duplicates and null rows removed ',
             round(abs(100 * (data.shape[0] - rows) / rows), 1),
             '% of your rows.',
         )
-        # Convert columns names to lowercase and remove any special characters
-        data.columns = [
-            remove_special_chars(col.replace(' ', "_").lower().strip())
-            for col in data.columns
-        ]
 
         print('\nProcessing Date Columns:')
         if data_category == 'evictions':
@@ -181,7 +201,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                     u'\u2326',
                     'Date column not found, please adjust your column headers.',
                 )
-                return None
+                return None, None
         else:
             print(f'\u2713  Process will use {date_column}.')
         # If date column is null, tell user to fix the file
@@ -191,7 +211,7 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
                 u'\u2326',
                 'Date column is empty - please ensure date data is included.',
             )
-            return None
+            return None, None
 
         if data[date_column].dtype == object:
             data[date_column] = pd.to_datetime(
@@ -237,14 +257,15 @@ def load_data(sub_directories: T.List, data_category) -> pd.DataFrame:
         data = data[(data.year >= MIN_YEAR) & (data.year <= MAX_YEAR)]
         print(u'\u2713', 'Data loading complete. Address validation is next.')
 
-        return data
+        return data, df_dups_out
 
     print(
         u'\u2326',
-        'No data found in correct format to process. ',
-        'Please review FLH Partner Site Data Collection Template!',
+        'No', data_category, 'sub-folder exists in the folder.',
+        'Please add a', data_category, 'sub-folder.', 
+        'Please review FLH Partner Site Data Collection Template for more details.',
     )
-    return None
+    return None, None
 
 
 def write_df_to_disk(input_df: pd.DataFrame, write_path_filename: Path) -> None:
@@ -267,12 +288,13 @@ def main(input_path: str) -> None:
     sub_directories = verify_input_directory(input_path)
     # If the input_directory fails, the main function should abort:
     if sub_directories is None:
-        return "The path provided does not have the expected subdirectory structure."
+        return("The path provided does not include the following three folders: evictions, mortgage_foreclosures, and tax_lien_foreclosures. ",
+        'Please add these three files to the folder to proceed')
 
     # LOAD ALL 3 TYPES OF DATA (AS AVAILABLE)
-    df_evic = load_data(sub_directories, 'evictions')
-    df_mort = load_data(sub_directories, 'mortgage_foreclosures')
-    df_tax = load_data(sub_directories, 'tax_lien_foreclosures')
+    df_evic, df_evic_dups = load_data(sub_directories, 'evictions')
+    df_mort, df_mort_dups = load_data(sub_directories, 'mortgage_foreclosures')
+    df_tax, df_tax_dups = load_data(sub_directories, 'tax_lien_foreclosures')
 
     if (df_evic is None) and (df_mort is None) and (df_tax is None):
         print(
@@ -282,19 +304,17 @@ def main(input_path: str) -> None:
         return None
 
     # STANDARDIZE THE INPUT DATA ADDRESSES
-    df_evic_standardized, evic_avail_cols = standardize_input_addresses(
+    df_evic_standardized, df_evic_parse_err, evic_avail_cols = standardize_input_addresses(
         df_evic, 'eviction'
     )
-    df_mort_standardized, mort_avail_cols = standardize_input_addresses(
+    df_mort_standardized, df_mort_parse_err, mort_avail_cols = standardize_input_addresses(
         df_mort, 'foreclosure'
     )
-    df_tax_standardized, tax_avail_cols = standardize_input_addresses(
+    df_tax_standardized, df_tax_parse_err, tax_avail_cols = standardize_input_addresses(
         df_tax, 'tax lien'
     )
 
-    # print(evic_avail_cols)
-    # print(mort_avail_cols)
-    # print(tax_avail_cols)
+
 
     # CREATE TIME SERIES PLOTS
     plt.rcParams['figure.figsize'] = [25, 10]
@@ -361,9 +381,13 @@ def main(input_path: str) -> None:
             df_mort_geocoded_final
         )
 
+
     # GRAB ACS DATA; used in housing loss summary and demographic correlation search
     print("\nPreparing to get ACS data...")
-    acs_df, acs_data_dict = get_acs_data(state_fips, county_fips, ACS_YEAR)
+    acs_df = pd.DataFrame()
+    for county in county_fips:
+        acs_df_county, acs_data_dict = get_acs_data(state_fips, str(county), ACS_YEAR)
+        acs_df = pd.concat([acs_df, acs_df_county], axis=0)
     if acs_df is None:
         print(
             '\u2326  Insufficient geography information to retrieve ACS Data!',
@@ -385,6 +409,7 @@ def main(input_path: str) -> None:
             + str(summary_write_path / ACS_DATA_DICT_FILENAME)
             + ' - inspect for ACS variable definitions and reference'
         )
+    
 
     ### Grab the renter and home owner total count estimates we'll use
     ### later for housing loss rate calculations
@@ -398,6 +423,29 @@ def main(input_path: str) -> None:
     owner_hhs.rename(
         columns={'total-owner-occupied-households': 'households_by_geoid'}, inplace=True
     )
+
+    #Get the exceptions from geocoded data- those that dont merge with the acs data
+    df_evic_errors = None
+    df_mort_errors = None
+    df_tax_errors = None
+    if df_evic_geocoded_final is not None:
+        geoid_noacs_evic = df_evic_geocoded_final.merge(renter_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
+        geoid_noacs_evic = geoid_noacs_evic[geoid_noacs_evic['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_evic = df_evic_geocoded_final[df_evic_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_evic['errors'] = 'Unable to find a match in the census geocoder'
+        df_evic_errors = no_geoid_evic
+    if df_mort_geocoded_final is not None:
+        geoid_noacs_mort = df_mort_geocoded_final.merge(owner_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
+        geoid_noacs_mort = geoid_noacs_mort[geoid_noacs_mort['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_mort = df_mort_geocoded_final[df_mort_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_mort['errors'] = 'Unable to find a match in the census geocoder'
+        df_mort_errors = no_geoid_mort
+    if df_tax_geocoded_final is not None:
+        geoid_noacs_tax = df_tax_geocoded_final.merge(owner_hhs, left_on='geoid', right_on='GEOID', how = 'left', indicator=True)
+        geoid_noacs_tax = geoid_noacs_tax[geoid_noacs_tax['_merge'] == 'left_only'][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_tax = df_tax_geocoded_final[df_tax_geocoded_final['geoid'].isna()][['street_address_1', 'city', 'state', 'zip_code']]
+        no_geoid_tax['errors'] = 'Unable to find a match in the census geocoder'
+        df_tax_errors = no_geoid_tax
 
     # CREATE HOUSING LOSS SUMMARIES
     evic_summ = summarize_housing_loss(df_evic_geocoded_final, renter_hhs, 'evic')
@@ -466,6 +514,24 @@ def main(input_path: str) -> None:
     print(
         '*** Created ' + str(summary_write_path / HOUSING_LOSS_SUMMARY_FILENAME) + msg
     )
+
+    #Create summary of the errors and output to file
+    if (df_evic_parse_err is not None or df_evic_errors is not None or df_evic_dups is not None):
+        df_evic_errors = pd.concat([df_evic_parse_err, df_evic_errors, df_evic_dups])
+        write_df_to_disk(
+            df_evic_errors, summary_write_path / EVIC_ADDRESS_ERR_FILENAME
+        )
+    if (df_mort_parse_err is not None or df_mort_errors is not None or df_mort_dups is not None):
+        df_mort_errors = pd.concat([df_mort_parse_err,df_mort_errors, df_mort_dups])
+        write_df_to_disk(
+            df_mort_errors, summary_write_path / MORT_ADDRESS_ERR_FILENAME
+        )
+    if (df_tax_parse_err is not None or df_tax_errors is not None or df_tax_dups is not None):
+        df_tax_errors = pd.concat([df_tax_parse_err, df_tax_errors, df_tax_dups])
+        write_df_to_disk(
+            df_tax_errors, summary_write_path / TAX_ADDRESS_ERR_FILENAME
+        )
+
 
     # Prepare subdirectories to store correlation analysis results
 

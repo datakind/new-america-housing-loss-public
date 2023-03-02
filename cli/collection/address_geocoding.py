@@ -123,7 +123,7 @@ def census_geocode_records(df_chunk: pd.DataFrame) -> pd.DataFrame:
 
 
 def census_geocode_full_dataset(
-    input_df: pd.DataFrame, data_type: str, cache_filepath: str
+    input_df: pd.DataFrame, data_type: str, cache_filepath: str, cache_off: bool = False
 ) -> T.Union[pd.DataFrame, None]:
     """Given an input dataframe with address data, geocode all the records in it."""
     # Check for error condition
@@ -138,15 +138,16 @@ def census_geocode_full_dataset(
         str(cache_filepath) + "/" + GEOCODER_CACHE_FILE_PREFIX + data_type + ".csv"
     )
 
-    # Check to see if cached data are available; if so, use them
-    cached_df = None
-    if Path(cache_filename).is_file():
-        print("Found cached data, resuming geocoding from the previous cache point...")
-        cached_df = pd.read_csv(cache_filename)
-        # Use the `id` column to find the cached record IDs from the original dataframe
-        cached_ids = cached_df["id"].unique()
-        # Remove those record IDs from the original dataframe and geocode the rest
-        input_df = input_df[~input_df.index.isin(cached_ids)]
+    if cache_off == False:
+        # Check to see if cached data are available; if so, use them
+        cached_df = None
+        if Path(cache_filename).is_file():
+            print("Found cached data, resuming geocoding from the previous cache point...")
+            cached_df = pd.read_csv(cache_filename)
+            # Use the `id` column to find the cached record IDs from the original dataframe
+            cached_ids = cached_df["id"].unique()
+            # Remove those record IDs from the original dataframe and geocode the rest
+            input_df = input_df[~input_df.index.isin(cached_ids)]
 
     # Format the dataframe for geocoding with Census Batch Geocoder API
     df_geocode_cols = format_data_for_geocoding(input_df)
@@ -172,23 +173,24 @@ def census_geocode_full_dataset(
             output_df.to_csv(cache_filename, index=False)
 
     # If we have a cache available, append to the geocoded data, assuming process resumed
-    if cached_df is not None:
-        output_df = pd.concat([cached_df, output_df], ignore_index=True)
-
+    if cache_off == False:
+            if cached_df is not None:
+                output_df = pd.concat([cached_df, output_df], ignore_index=True)
     return output_df
 
 
 def append_census_geocode_data(
-    address_df: pd.DataFrame, data_type: str, cache_filepath: str
-) -> T.Union[pd.DataFrame, None]:
+    address_df: pd.DataFrame, data_type: str, cache_filepath: str, cache_off: bool = False
+) -> T.Tuple[pd.DataFrame, None, pd.DataFrame]:
     """Append census geocoder data to the dataframe containing raw/standardized addresses."""
     if address_df is None:
-        return None, None
+        return None, None, None
 
     # Geocode all the records and get back the data
-    geocoder_data = census_geocode_full_dataset(address_df, data_type, cache_filepath)
+    geocoder_data = census_geocode_full_dataset(address_df, data_type, cache_filepath, cache_off)
     if geocoder_data.empty:
-        return None, None
+        return None, None, None
+        
     # The return dataframe has an `id` column
     # This is the index of the input dataframe, use it for dedup and joining back
     geocoder_data.drop_duplicates(subset="id", inplace=True)
@@ -197,6 +199,7 @@ def append_census_geocode_data(
     output_geocoded_df = address_df.merge(
         geocoder_data, how="left", left_index=True, right_index=True
     )
+
     # Create a census geoid column
     state_fips = [
         str(int(x)).zfill(2) if pd.notna(x) else ""
@@ -219,135 +222,21 @@ def append_census_geocode_data(
     success_record_count = output_geocoded_df["state_fips"].notna().sum()
     # NOTE: Very strange, success rate varies by run... the same record sometimes gets geocoded, sometimes not!
 
-    return output_geocoded_df, success_record_count
-
-
-def zip_to_tract_lookup(
-    zipcode: str, data_year: int = 2020
-) -> T.List[T.Dict[str, T.Union[str, float]]]:
-    """Retrieve census tract data for a given zipcode using the HUD crosswalk API.
+    #return a dataframe with those that failed to geocode
+    if success_record_count < len(output_geocoded_df):
+        failed_geocoding_df = output_geocoded_df[output_geocoded_df["state_fips"].isna()]
+        if data_type == 'eviction':
+            failed_geocoding_df = failed_geocoding_df[['eviction_filing_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        elif data_type == 'foreclosure':
+            failed_geocoding_df = failed_geocoding_df[['foreclosure_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        elif data_type == 'tax lien':
+            failed_geocoding_df = failed_geocoding_df[['tax_lien_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        #drop those that failed to geocode from output_geocoded_df
+        output_geocoded_df = output_geocoded_df[output_geocoded_df["state_fips"].notna()]
+        return output_geocoded_df, success_record_count, failed_geocoding_df
     
-    Inputs
-    ------
-    zipcode: 5-digit string (zero-padded, if necessary) representing the zipcode
-    data_year: The year for which data is to be retrieved
-    
-    Outputs
-    -------
-    results: Data for all the census tracts contained in or overlapping this zipcode
-    """
-    # Check for empty input
-    if pd.isna(zipcode):
-        return None
-    # Prepare the query string
-    query_string = HUD_XWALK_RESPONSE_BASE + f"&year={data_year}&query={zipcode}"
-    # Get the API response
-    response = requests.get(
-        query_string, headers={"Authorization": "Bearer " + PDR_ACCESS_TOKEN}
-    )
-    # Check for a successful response
-    if response.status_code != 200:
-        print(
-            f"\t\u2326  ERROR in Zip-Tract mapping for zip {zipcode}, Status code {response.status_code}"
-        )
-        return None
-
-    response_data = response.json()
-    results = response_data["data"]["results"]
-
-    return results
-
-
-def get_probabilistic_zip_geoid(
-    lookup_zip: str,
-    zip_geoids_map: T.Dict[str, T.List[T.Dict[str, T.Union[str, float]]]],
-) -> str:
-    """Probabilistically look up GEOID for a zipcode.
-
-    Inputs
-    ------
-    lookup_zip: The zipcode for which we want to probabilistically determine GEOID
-    zip_geoids_map: A dictionary/JSON with the fractions of business, residential,
-        other and total addresses in each GEOID that is contained in or overlaps
-        that zipcode; we will use the total fraction, because in the input
-        evictions/foreclosures data, we do not have a reliable way to distinguish
-        business vs. residential addresses
-
-    We use the following logic for probabilistic lookup:
-    1. Generate a random number between 0.0 and 1.0
-    2. Loop through the results and when the cumulative sum first exceeds
-       the generated random number, assign that geoid to that zipcode
-    3. If we are at the last result in the loop, just return that one (this
-       handles the minor edge case that the fractions do not always add up
-       exactly to 1.0 and therefore could possibly never exceed the generated
-       random number if it is also very close to 1.0)
-
-    Outputs
-    -------
-    geoid: A probabilistically determined GEOID for the lookup zipcode
-    """
-    # Generate a random number
-    rand_num = np.random.random()
-    # Initialize sum
-    cumul_tract_sum = 0.0
-    zip_results = zip_geoids_map[lookup_zip]
-    # If there is no data for that zipcode, return None
-    if zip_results is None:
-        return None
-    # Loop through the results and when the cumulative sum first exceeds the
-    # generated random number, assign that geoid to that zipcode
-    for idx, result in enumerate(zip_results):
-        # Return the last result if we are at that point
-        if idx == len(zip_results) - 1:
-            return result["geoid"]
-        # Otherwise do the loop and check for the condition
-        cumul_tract_sum += result["tot_ratio"]
-        if rand_num < cumul_tract_sum:
-            return result["geoid"]
-
-
-def append_zip_to_tract_data(
-    addr_geocode_df: pd.DataFrame,
-) -> T.Union[pd.DataFrame, None]:
-    """Append ZIP to census tract data to the dataframe containing geocoded addresses (IF ANY)."""
-    if ("zip_code" not in addr_geocode_df.columns) and (
-        "zip_code_clean" not in addr_geocode_df.columns
-    ):
-        print("\u2326", "No zip code data found for additional geocoding")
-        return None
-    # If a clean 5-character zip code is not available, create that column
-    if ("zip_code" in addr_geocode_df.columns) and (
-        "zip_code_clean" not in addr_geocode_df.columns
-    ):
-        addr_geocode_df["zip_code_clean"] = addr_geocode_df["zip_code"].apply(
-            get_zipcode5
-        )
-    # If no `geoid` column exists, create a blank one
-    if "geoid" not in addr_geocode_df.columns:
-        addr_geocode_df["geoid"] = [None] * len(addr_geocode_df)
-    # Check which geoids are missing and use zip-tract lookup to fill it in, but create df copy first
-    output_geocoded_df = addr_geocode_df.copy()
-    # Find which records have missing GEOIDs and get the unique zipcodes in these records
-    missing_geoids_zipcodes = output_geocoded_df.loc[
-        pd.isna(output_geocoded_df["geoid"])
-    ]["zip_code_clean"].unique()
-    # Create a zip-geoid map using zip-to-tract lookup
-    zip_geoid_map = {
-        lookup_zip: zip_to_tract_lookup(lookup_zip)
-        for lookup_zip in missing_geoids_zipcodes
-    }
-    # For missing GEOIDs, fill them in by applying this map to respective zipcodes
-    output_geocoded_df.loc[
-        pd.isna(output_geocoded_df["geoid"]), "geoid"
-    ] = output_geocoded_df.loc[
-        pd.isna(output_geocoded_df["geoid"]), "zip_code_clean"
-    ].apply(
-        get_probabilistic_zip_geoid, args=(zip_geoid_map,)
-    )
-
-    success_record_count = output_geocoded_df["geoid"].notna().sum()
-
-    return output_geocoded_df, success_record_count
+    else:
+        return output_geocoded_df, success_record_count, None
 
 
 def geocode_input_data(
@@ -372,7 +261,7 @@ def geocode_input_data(
     # If a street address is available, use the census geocoder to geocode
     elif "street_address_1" in df_avail_cols:
         print(f"\nStarting geocoding of {data_type} data...")
-        addr_geocoded_df, addr_success_record_count = append_census_geocode_data(
+        addr_geocoded_df, addr_success_record_count, failed_geocoded_df = append_census_geocode_data(
             input_df, data_type, cache_filepath
         )
         if addr_geocoded_df is None:
@@ -382,35 +271,29 @@ def geocode_input_data(
             f"\u2713  Address geocoding successfully geocoded",
             f"{addr_success_record_count / len(input_df) * 100:.1f}% of input records",
         )
-        # If zip code is also available, use that to geocode the missing records
-        if "zip_code" in df_avail_cols:
-            print("Using Zip-To-Census-Tract lookup for additional geocoding...")
-            output_geocoded_df, zip_success_record_count = append_zip_to_tract_data(
-                addr_geocoded_df
+        #if failed_geocoded_df has rows, try to geocode them again
+        if len(failed_geocoded_df) > 0:
+            addr_geocoded_df2, addr_success_record_count2, failed_geocoded_df2 = append_census_geocode_data(
+                failed_geocoded_df, data_type, cache_filepath, cache_off=True
             )
-            print(
-                f"\u2713  Zip-to-Census-Tract lookup successfully geocoded an additional",
-                f"{(zip_success_record_count - addr_success_record_count) / len(input_df) * 100:.1f}% of input records",
-            )
-        else:
-            output_geocoded_df = addr_geocoded_df.copy()
-    # If a zip code column is available, use the zip-tract lookup
-    elif "zip_code" in df_avail_cols:
-        print(f"\nGeocoding {data_type} data with Zip-to-Census-Tract lookup...")
-        output_geocoded_df, zip_success_record_count = append_zip_to_tract_data(
-            input_df
-        )
-        print(
-            f"\u2713  Zip-to-Census-Tract lookup successfully geocoded",
-            f"{zip_success_record_count / len(input_df) * 100:.1f}% of input records",
-        )
+            #append the second geocoded dataframe to the first
+            addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df2], ignore_index=True)
+        
+            if len(failed_geocoded_df2) > 0:
+                addr_geocoded_df3, addr_success_record_count3, failed_geocoded_df3 = append_census_geocode_data(
+                    failed_geocoded_df2, data_type, cache_filepath, cache_off=True
+                )
+                #append the third geocoded dataframe to the first two
+                addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df3, failed_geocoded_df3], ignore_index=True)
+
+        output_geocoded_df = addr_geocoded_df.copy()
     else:
         output_geocoded_df = input_df.copy()
 
     return output_geocoded_df
 
 
-def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, str]:
+def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, list, str, str]:
     """Given a geocoded dataframe, determine the most likely state, county and city from it."""
     # Check for empty dataframe
     if geocoded_df is None:
@@ -429,23 +312,56 @@ def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, 
         most_likely_state_fips = (
             only_geo_df["geoid"].str.slice(stop=2).value_counts().index[0]
         )
-        most_likely_county_fips = (
-            only_geo_df["geoid"].str.slice(start=2, stop=5).value_counts().index[0]
+        all_county_fips = (
+            only_geo_df["geoid"].str.slice(stop=5).value_counts().index.to_list()
         )
+        #limit the list to those where the first 2 digits match the state fips
+        most_likely_county_fips = [x[2:5] for x in all_county_fips if x[:2] == most_likely_state_fips]
+        most_likely_county_fips_str = []
+
+        #check if the items within most_likely_county_fips are numbers
+        #if so, convert to string and pad with 0s
+        for item in most_likely_county_fips:
+            if isinstance(item, (int, float, complex)):
+                #append to number_list
+                str_item = str(int(item)).zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            elif isinstance(item, str):
+                str_item = item.zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            else:
+                most_likely_county_fips_str.append("None")
+
     # Otherwise check if state_fips and county_fips are present in the data
     elif ("state_fips" in geocoded_df.columns) and (
         "county_fips" in geocoded_df.columns
     ):
         # Likely these are raw outputs from the census geocoder and numeric by default
         most_likely_state_fips = geocoded_df["state_fips"].value_counts().index[0]
-        most_likely_county_fips = geocoded_df["county_fips"].value_counts().index[0]
         if isinstance(most_likely_state_fips, (int, float)):
             most_likely_state_fips = str(int(most_likely_state_fips)).zfill(2)
-        if isinstance(most_likely_county_fips, (int, float)):
-            most_likely_county_fips = str(int(most_likely_county_fips)).zfill(3)
+
+        all_county_fips = (
+            only_geo_df["geoid"].str.slice(stop=5).value_counts().index.to_list()
+        )
+        #limit the list to those where the first 2 digits match the state fips
+        most_likely_county_fips = [x[2:5] for x in all_county_fips if x[:2] == most_likely_state_fips]
+        most_likely_county_fips_str = []
+        #check if the items within most_likely_county_fips are numbers
+        #if so, convert to string and pad with 0s
+        for item in most_likely_county_fips:
+            if isinstance(item, (int, float, complex)):
+                #append to number_list
+                str_item = str(int(item)).zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            elif isinstance(item, str):
+                str_item = item.zfill(3)
+                most_likely_county_fips_str.append(str_item)
+            else:
+                most_likely_county_fips_str.append("None")
     else:
         most_likely_state_fips = None
-        most_likely_county_fips = None
+        most_likely_county_fips_str = None
 
     # Find the city
     if "city" in geocoded_df.columns:
@@ -461,7 +377,7 @@ def find_state_county_city(geocoded_df: pd.DataFrame) -> T.Tuple[str, str, str, 
 
     return (
         most_likely_state_fips,
-        most_likely_county_fips,
+        most_likely_county_fips_str,
         most_likely_city_str,
         most_likely_state_str,
     )

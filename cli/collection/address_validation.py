@@ -7,6 +7,9 @@ import scourgify
 from collection.address_cleaning import get_zipcode5
 from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
 
+import debugpy
+
+
 
 # Requires input_path
 def verify_input_directory(input_path: str) -> T.List:
@@ -199,22 +202,26 @@ def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
     except Exception as e:
         print(f'\t\u2326  ERROR parsing address "{input_address}": {e}')
         # For now just create a blank record (and drop it), but could think about better error handling later
-        return None
+        return f'ERROR parsing address "{input_address}": {e}'
 
 
 def standardize_input_addresses(
     input_df: pd.DataFrame, data_type: str
-) -> T.Union[T.Tuple[pd.DataFrame, list], T.Tuple[None, None]]:
+) -> T.Union[T.Tuple[pd.DataFrame, pd.DataFrame, list], T.Tuple[None, None, None]]:
     """Standardize the address column(s) and the ZIP code in a dataframe."""
     if input_df is None:
-        return (None, None)
+        return (None, None, None)
     # Standardize the addresses using the usaddress-scourgify library
     output_df, df_avail_cols = validate_address_data(input_df, data_type)
     if 'street_address_1' in df_avail_cols:
         print(f"\nStandardizing {data_type} data addresses for geocoding...")
-        output_df['street_address_1_clean'] = output_df['street_address_1'].apply(
+        df_all_addresses = output_df
+        df_all_addresses['street_address_1_clean'] = output_df['street_address_1'].apply(
             get_clean_address
         )
+        df_errors = df_all_addresses[df_all_addresses['street_address_1_clean'].str.contains('ERROR')][['street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean']]
+        df_errors.rename(columns = {'street_address_1_clean': 'errors'}, inplace = True)
+        output_df = df_all_addresses[~df_all_addresses['street_address_1_clean'].str.contains('ERROR')]
         print(
             f"\u2713  {output_df['street_address_1_clean'].notna().sum() / len(output_df) * 100:.1f}% of",
             'input records were successfully cleaned and standardized for geocoding.',
@@ -225,4 +232,4 @@ def standardize_input_addresses(
         output_df['zip_code_clean'] = output_df['zip_code'].apply(get_zipcode5)
         df_avail_cols.append('zip_code_clean')
 
-    return output_df, df_avail_cols
+    return output_df, df_errors, df_avail_cols

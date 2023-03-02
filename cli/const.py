@@ -18,10 +18,10 @@ ACS_YEAR = 2020
 
 GEOCODE_URL = 'https://geocoding.geo.census.gov/geocoder/geographies/addressbatch'
 GEOCODE_PAYLOAD = {
-    'benchmark': 'Public_AR_Current',
-    'vintage': 'Current_Current',
-    #'benchmark':'Public_AR_Census2020',
-    #'vintage':'Public_AR_Census2020',
+    #'benchmark': 'Public_AR_Current',
+    #'vintage': 'Current_Current',
+    'benchmark':'Public_AR_Census2020',
+    'vintage':'Census2020_Census2020',
     'response': 'json',
 }
 
@@ -74,3 +74,6 @@ ACS_DATA_DICT_FILENAME = 'acs_data_dictionary.csv'
 HOUSING_LOSS_SUMMARY_FILENAME = 'housing_loss_summary.csv'
 TRACT_BOUNDARY_FILENAME = 'census_tract_boundaries.geojson'
 GIS_IMPORT_FILENAME = 'gis_data_import.gpkg'
+EVIC_ADDRESS_ERR_FILENAME = 'evic_address_errors.csv'
+MORT_ADDRESS_ERR_FILENAME = 'mort_address_errors.csv'
+TAX_ADDRESS_ERR_FILENAME= 'tax_address_errors.csv'
