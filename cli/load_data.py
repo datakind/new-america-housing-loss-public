@@ -85,7 +85,7 @@ def load_data(input_path) -> T.Tuple[pd.DataFrame,pd.DataFrame]:
         print(u'\u2713', 'First row of data:\n', df.iloc[0, :])
         data = df
     else:
-        print(f'Invalid file detected {str(f)}')
+        print(f'Invalid file detected {str(input_path)}')
         return None, None
 
         
