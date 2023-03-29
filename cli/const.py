@@ -15,6 +15,7 @@ MAX_YEAR = 2999
 
 # The year used to get ACS data
 ACS_YEAR = 2020
+ACS_API_KEY=os.getenv("ACS_API_KEY", "")
 
 GEOCODE_URL = 'https://geocoding.geo.census.gov/geocoder/geographies/addressbatch'
 GEOCODE_PAYLOAD = {
@@ -61,19 +62,14 @@ OUTPUT_PATH_PLOTS_DETAIL = 'detailed_results'
 OUTPUT_ALL_HOUSING_LOSS_PLOTS = (
     'output_data/analysis_plots/correlations_all_housing_loss'
 )
-OUTPUT_EVICTION_PLOTS = 'output_data/analysis_plots/correlations_eviction_only'
-OUTPUT_FORECLOSURE_PLOTS = 'output_data/analysis_plots/correlations_foreclosure_only'
 OUTPUT_PATH_SUMMARIES = 'output_data/data_summaries/'
 OUTPUT_PATH_MAPS = 'output_data/mapping_data/'
 
-GEOCODED_EVICTIONS_FILENAME = 'evictions_data_geocoded.csv'
-GEOCODED_FORECLOSURES_FILENAME = 'foreclosures_data_geocoded.csv'
-GEOCODED_TAX_LIENS_FILENAME = 'tax_liens_data_geocoded.csv'
+GEOCODED_FILENAME = 'data_geocoded.csv'
 HOUSING_LOSS_TIMESERIES_FILENAME = 'housing_loss_timeseries.png'
 ACS_DATA_DICT_FILENAME = 'acs_data_dictionary.csv'
 HOUSING_LOSS_SUMMARY_FILENAME = 'housing_loss_summary.csv'
 TRACT_BOUNDARY_FILENAME = 'census_tract_boundaries.geojson'
 GIS_IMPORT_FILENAME = 'gis_data_import.gpkg'
-EVIC_ADDRESS_ERR_FILENAME = 'evic_address_errors.csv'
-MORT_ADDRESS_ERR_FILENAME = 'mort_address_errors.csv'
-TAX_ADDRESS_ERR_FILENAME= 'tax_address_errors.csv'
+ADDRESS_ERR_FILENAME = 'address_errors.csv'
+

@@ -4,6 +4,7 @@ import typing as T
 import geopandas
 import pandas as pd
 import requests
+import sys
 
 
 # 1. Formatting JSON response objects to be more easily parsed by eye
@@ -90,6 +91,11 @@ def get_input_data_geometry(
         # Assemble the request URI and retrieve the data
         request = create_tigerweb_query(state_fips, i)
         response = requests.get(str(request))
+        if 'error' in response.json():
+            print(request)
+            print(state_fips, i, response.json())
+            print('Error in response')
+            sys.exit()
         response = rename_baseline(response.json(), state_fips, i)
 
         # Write the JSON response to a file and read into a geopandas dataframe

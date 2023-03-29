@@ -10,7 +10,9 @@ import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 
-from const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
+from pathlib import Path
+
+from ..const import OUTPUT_PATH_PLOTS_DETAIL, STAT_SIGNIFICANCE_CUTOFF
 
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
@@ -140,10 +142,10 @@ def calc_acs_correlations(df: pd.DataFrame, x_var: str, y_var: str):
     try:
         corr = stats.pearsonr(x, y)
         # corr = stats.spearmanr(x,y)
-
-    except:
+    except Exception as e:
+        print(e)
         print('Couldn\'t calculate correlation between ' + x_var + ' and ' + y_var)
-        corr = [999.0, 999.0]
+        corr = [0.0, 0.0]
 
     return corr
 
@@ -233,6 +235,10 @@ def correlation_analysis(
     plot_write_path: str,
 ) -> None:
 
+    #make a detail plot folder within the plot write path
+    detail_plot_write_path = Path(plot_write_path / OUTPUT_PATH_PLOTS_DETAIL)
+    detail_plot_write_path.mkdir(parents=True, exist_ok=True)
+
     ### Defining the list of variables to run correlations on
     acs_vars_for_correlations = get_acs_vars_for_analysis()
 
@@ -245,17 +251,10 @@ def correlation_analysis(
 
     mrg = processed_data_df.merge(census_df, left_on='geoid', right_on='GEOID')
 
-    hl_type = ''
-    if target_var == 'total_filings':
-        hl_type = 'evictions'
-    if target_var == 'total_foreclosures':
-        hl_type = 'all foreclosures'
-    if target_var == 'housing-loss-index':
-        hl_type = 'all types of housing loss'
 
     print(
         '\nCalculating correlations and visualizing the strongest relationships for '
-        + str(hl_type)
+        + str(target_var)
         + '...'
     )
 
@@ -304,7 +303,14 @@ def correlation_analysis(
     ###  Load previous site data.  unfortunately currently pulling from two
     ###  files (same data but different indices) due to a particularity
     ###  with the boxplot implementation
-    prev_sites = pd.read_csv('static_data/prev_data_with_labels.csv', index_col='var')
+
+    # check if file exists. Awful hack to support FEAT classic in DK API and at command line. All
+    # this needs to be refactored away. mjh
+    print(os.getcwd())
+    file = './feat/static_data/prev_data_with_labels.csv'
+    if not os.path.isfile(file):
+        file = './app/modules/feat/static_data/prev_data_with_labels.csv'
+    prev_sites = pd.read_csv(file, index_col='var')
     prev_sites_ind = prev_sites.reset_index(drop=True)
 
     bp = plt.boxplot(prev_sites_ind.T, vert=False, showfliers=False)
@@ -559,7 +565,7 @@ def correlation_analysis(
 
     print(
         '*** Saved ACS correlation analysis summaries for '
-        + str(hl_type)
+        + str(target_var)
         + ' to '
         + str(plot_write_path)
     )

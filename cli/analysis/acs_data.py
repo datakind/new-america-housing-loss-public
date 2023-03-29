@@ -8,11 +8,15 @@ import sys
 
 import pandas as pd
 
+from ..const import (
+    ACS_API_KEY
+)
+
 # line below suppresses annoying SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
 
 CENSUS_API_KEY = (
-    ''  # Get a census API key from census.gov and put between quotation marks
+    ACS_API_KEY  
 )
 sig_results = {}
 all_results = {}

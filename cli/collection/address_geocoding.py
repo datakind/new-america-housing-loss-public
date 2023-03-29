@@ -15,7 +15,7 @@ import requests
 from tqdm import tqdm
 
 # Global Variables
-from const import (
+from ..const import (
     GEOCODE_CACHE_SIZE,
     GEOCODE_CHUNK_SIZE,
     GEOCODE_PAYLOAD,
@@ -29,7 +29,7 @@ from const import (
 
 np.random.seed(RANDOM_SEED)
 
-from collection.address_cleaning import get_zipcode5
+from ..collection.address_cleaning import get_zipcode5
 
 
 def format_data_for_geocoding(input_df: pd.DataFrame) -> T.Union[pd.DataFrame, None]:
@@ -225,12 +225,7 @@ def append_census_geocode_data(
     #return a dataframe with those that failed to geocode
     if success_record_count < len(output_geocoded_df):
         failed_geocoding_df = output_geocoded_df[output_geocoded_df["state_fips"].isna()]
-        if data_type == 'eviction':
-            failed_geocoding_df = failed_geocoding_df[['eviction_filing_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
-        elif data_type == 'foreclosure':
-            failed_geocoding_df = failed_geocoding_df[['foreclosure_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
-        elif data_type == 'tax lien':
-            failed_geocoding_df = failed_geocoding_df[['tax_lien_sale_date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
+        failed_geocoding_df = failed_geocoding_df[['date', 'year', 'month', 'street_address_1', 'city', 'state', 'zip_code', 'street_address_1_clean', 'zip_code_clean']]
         #drop those that failed to geocode from output_geocoded_df
         output_geocoded_df = output_geocoded_df[output_geocoded_df["state_fips"].notna()]
         return output_geocoded_df, success_record_count, failed_geocoding_df
@@ -258,6 +253,7 @@ def geocode_input_data(
             str(int(x)).zfill(11) if pd.notna(x) else ""
             for x in output_geocoded_df["geoid"]
         ]
+        output_geocoded_df['data_type'] = data_type
     # If a street address is available, use the census geocoder to geocode
     elif "street_address_1" in df_avail_cols:
         print(f"\nStarting geocoding of {data_type} data...")
@@ -271,15 +267,15 @@ def geocode_input_data(
             f"\u2713  Address geocoding successfully geocoded",
             f"{addr_success_record_count / len(input_df) * 100:.1f}% of input records",
         )
-        #if failed_geocoded_df has rows, try to geocode them again
-        if len(failed_geocoded_df) > 0:
+        #if failed_geocoded_df has rows, try to geocode them again. 
+        if failed_geocoded_df is not None:
             addr_geocoded_df2, addr_success_record_count2, failed_geocoded_df2 = append_census_geocode_data(
                 failed_geocoded_df, data_type, cache_filepath, cache_off=True
             )
             #append the second geocoded dataframe to the first
             addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df2], ignore_index=True)
         
-            if len(failed_geocoded_df2) > 0:
+            if len(failed_geocoded_df2) is not None:
                 addr_geocoded_df3, addr_success_record_count3, failed_geocoded_df3 = append_census_geocode_data(
                     failed_geocoded_df2, data_type, cache_filepath, cache_off=True
                 )
@@ -287,8 +283,10 @@ def geocode_input_data(
                 addr_geocoded_df = pd.concat([addr_geocoded_df, addr_geocoded_df3, failed_geocoded_df3], ignore_index=True)
 
         output_geocoded_df = addr_geocoded_df.copy()
+        output_geocoded_df['data_type'] = data_type
     else:
         output_geocoded_df = input_df.copy()
+        output_geocoded_df['data_type'] = data_type
 
     return output_geocoded_df
 

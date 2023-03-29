@@ -4,36 +4,11 @@ from pathlib import Path
 import pandas as pd
 import scourgify
 
-from collection.address_cleaning import get_zipcode5
-from const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
+from ..collection.address_cleaning import get_zipcode5
+from ..const import MAX_YEAR, MIN_YEAR, REQUIRED_ADDRESS_COLUMNS, REQUIRED_SUB_DIRECTORIES
 
 import debugpy
 
-
-
-# Requires input_path
-def verify_input_directory(input_path: str) -> T.List:
-    """Parse the command line input and determine a directory path."""
-    directory_contents = [x for x in Path(input_path).iterdir()]
-    sub_directories = set(
-        [
-            str(f).replace(input_path, '').lower()
-            for f in directory_contents
-            if f.is_dir()
-        ]
-    )
-
-    if len(directory_contents) == 0:
-        print('\u2326  Directory is empty!')
-        return None
-    if len(sub_directories) == 0:
-        print('\u2326  No sub-directories present in input directory')
-        return None
-    if len(sub_directories.intersection(REQUIRED_SUB_DIRECTORIES)) == 0:
-        print('\u2326  Required sub-directories missing from input directory')
-        return None
-    print('\u2713  Required sub-directories found in input directory!')
-    return [Path(input_path) / sd for sd in sub_directories]
 
 
 def search_dataframe_column(
@@ -76,7 +51,7 @@ def search_dataframe_column(
     return found_column, use_alt_column
 
 
-def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
+def validate_address_data(data: pd.DataFrame) -> pd.DataFrame:
     """Validates and cleans the address data
     Creates indicator variables to assign GEOIDs
     Inputs
@@ -90,7 +65,7 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     # Converting all column names to lowercase
     data.columns = [col.lower() for col in data.columns]
     # Checking for required address columns (even if the columns are empty):
-    print(f"\nProcessing address columns for {data_type} data:")
+    print(f"\nProcessing address columns for data:")
     has_address_columns = set(REQUIRED_ADDRESS_COLUMNS).issubset(set(data.columns))
     if has_address_columns:
         print(u'\u2713', 'Data has all the required column headings for addresses.')
@@ -112,6 +87,7 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
         'Parcel_ID': 'TAXPIN',
         'Latitude': 'YC',
         'Longitude': 'XC',
+        'Type': 'Type',
     }
     # Initialize some variables
     avail_columns = {'has_' + col.lower(): False for col in search_col_dict.keys()}
@@ -132,7 +108,6 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     # DETERMINE WHICH GEOID MATCHING METHOD WILL BE PRIMARY METHOD
     data['use_geoid'] = 0
     data['use_street'] = 0
-    data['use_zip'] = 0
     method = []
     # Set dictionary to determine which address to clean/use for matching
     if avail_columns['has_geoid']:
@@ -148,9 +123,6 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
     if avail_columns['has_street_address_1'] and avail_columns['has_zip_code']:
         data['use_street'] = 1
         method.append('Street Address with Zip matching')
-    if avail_columns['has_zip_code']:
-        data['use_zip'] = 1
-        method.append('Zip to Census Tract method')
 
     print(
         'Based on the available address data,'
@@ -158,20 +130,7 @@ def validate_address_data(data: pd.DataFrame, data_type: str) -> pd.DataFrame:
         method,
     )
 
-    # Remember which date_column we have in this data:
-    if 'eviction_filing_date' in data.columns:
-        print('\u2713', 'Has eviction filing date column')
-        date_column = 'eviction_filing_date'
-    elif 'foreclosure_sale_date' in data.columns:
-        print('\u2713', 'Has foreclosure sale date column')
-        date_column = 'foreclosure_sale_date'
-    elif 'tax_lien_sale_date' in data.columns:
-        print('\u2713', 'Has tax lien sale date column')
-        date_column = 'tax_lien_sale_date'
-    else:
-        date_columns = [item for item in data.columns if 'date' in item.lower()]
-        date_column = date_columns[0]
-
+    date_column = "date"
     columns_to_return = [date_column, 'year', 'month'] + usable_address_cols
 
     data = data.loc[
@@ -205,16 +164,14 @@ def get_clean_address(input_address: str) -> T.Union[T.Dict, None]:
         return f'ERROR parsing address "{input_address}": {e}'
 
 
-def standardize_input_addresses(
-    input_df: pd.DataFrame, data_type: str
-) -> T.Union[T.Tuple[pd.DataFrame, pd.DataFrame, list], T.Tuple[None, None, None]]:
+def standardize_input_addresses(input_df: pd.DataFrame) -> T.Union[T.Tuple[pd.DataFrame, pd.DataFrame, list], T.Tuple[None, None, None]]:
     """Standardize the address column(s) and the ZIP code in a dataframe."""
     if input_df is None:
         return (None, None, None)
     # Standardize the addresses using the usaddress-scourgify library
-    output_df, df_avail_cols = validate_address_data(input_df, data_type)
+    output_df, df_avail_cols = validate_address_data(input_df)
     if 'street_address_1' in df_avail_cols:
-        print(f"\nStandardizing {data_type} data addresses for geocoding...")
+        print(f"\nStandardizing data addresses for geocoding...")
         df_all_addresses = output_df
         df_all_addresses['street_address_1_clean'] = output_df['street_address_1'].apply(
             get_clean_address
