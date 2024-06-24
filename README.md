@@ -2,33 +2,55 @@
 
 A Command Line Interface (CLI) that allows users to ingest eviction, 
 foreclosure, and tax lien data and outputs statistical summaries and 
-geolocation data. 
+geolocation data.
 
-## Python CLI Usage Instructions
-1. Ensure your data format is configured based on the required specification 
-   1. This [Google Sheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=104702318722434350576&rtpof=true&sd=true) presents the data requirements
-   2. This [Example Directory](https://github.com/datakind/new-america-housing-loss-public/tree/main/cli/collection/tests/resources) shows a populated version of the format with random addresses
-2. Download Python 3.8.10 here: https://www.python.org/downloads/release/python-3810/ and follow the instructions to install Python
-3. Navigate to the New America Housing Loss Tool here: https://github.com/datakind/new-america-housing-loss-public.git
-4. Click `Code` and `Download Zip` to download the code
-5. Unzip the zip file in the directory of your choice
-6. Open a terminal or a command prompt and navigate to where the code was downloaded (note: this directory will end with `new-america-housing-loss-public-main`)
-7. Change directory to the `cli` using the command `cd cli` 
-8. If you are running Windows, you will need to run the following commands to install dependencies:
-   1. `py -m pip install whl/GDAL-3.3.3-cp38-cp38-win_amd64.whl`
-   2. `py -m pip install whl/Fiona-1.8.20-cp38-cp38-win_amd64.whl`
-9. Run the following commands to install dependencies:
-   1. For Mac/Linux, run `python -m pip install -r requirements.txt`
-   2. For Windows, run `py -m pip install -r requirements.txt`
-10. Run the tool against your data:
-    1. For Mac/Linux, run `python load_data.py /path/to/input_data/`
-    2. For Windows, run `py load_data.py C:\path\to\input_data\`
-11. The output will be available one level up from your data directory in a folder called `output_data`
-    1. The `analysis_plots` directory contains time series and correlation analysis of your content
-    2. The `data_summaries` directory contains a summary of evictions/foreclosures by geocode (enriched with American Community Survey (ACS) data)
-    3. The `full_datasets` directory contains all eviction/foreclosure geocoded records
-    4. The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
+# Setup 
 
-## Structure
+Get the FEAT code ...
 
-* `cli/` - code to run the DataKind New America Housing Loss Analysis Tool
+1. Navigate to the New America Housing Loss Tool here: https://github.com/datakind/new-america-housing-loss-public.git
+2. Click `Code` and `Download Zip` to download the code
+3. Unzip the zip file in the directory of your choice
+
+Then setup the FEAT environment ...
+
+1. Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) by selecting the installer that fits your OS version.
+2. Build your environment:
+   - Open a terminal
+     - On Mac/Linux use the Terminal app
+     - On Windows run the program 'Anaconda prompt'
+   - Change directory to be where you unzipped the FEAT code, `new-america-housing-loss-public`
+     - `cd <DIRECTORY WHERE FEAT IS>`
+   - Run command: `conda env create -f environment.yml` (if you need to rebuild, use `conda env update -f environment.yml`) 
+
+# Running FEAT
+
+First, create your input data ...
+
+1. Download [this spreadsheet](https://docs.google.com/spreadsheets/d/1WKxpcxZI_MMJJ5lqcwauhsuw3NBxwcG5/edit?usp=sharing&ouid=106808949113099347741&rtpof=true&sd=true)
+2. In the sheet populate tabs `Evictions`, `Mortgage Foreclosures` and `Tax Lien Foreclosures` with your data. Note, some tabs can be empty if you don't have data
+4. Save each tab as a csv file into the FEAT folders as follows:
+    - `evictions.csv` should be saved to `new-america-housing-loss-public/cli/work/evictions`
+    - `mortgage_foreclosures.csv` should be saved to `new-america-housing-loss-public/cli/work/mortgage_foreclosures`
+    - `tax_lien_foreclosures.csv` should be saved to `new-america-housing-loss-public/cli/work/tax_lien_foreclosures` 
+
+Note: You don't have to have all three files, but must have at least one.
+
+Then, run FEAT ...
+
+1. Open a terminal
+   - On Mac/Linux use the Terminal app
+   - On Windows run the program 'Anaconda prompt'
+2. Run command: `conda activate housing_loss_env`
+3. Change directory to be where you unzipped the FEAT code, `new-america-housing-loss-public`
+   - `cd <DIRECTORY WHERE FEAT IS>`
+4. `cd cli/work`
+5. Run command: `python ../load_data.py .`
+    
+The output will be available in a folder called `output_data`
+
+- The `analysis_plots` directory contains time series and correlation analysis of your content
+- The `data_summaries` directory contains a summary of evictions/foreclosures by geocode (enriched with American Community Survey (ACS) data)
+- The `full_datasets` directory contains all eviction/foreclosure geocoded records
+- The `mapping_data` directory contains a geopackage (.gpkg) file that can be examined using QGIS
+

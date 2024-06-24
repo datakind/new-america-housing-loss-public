@@ -1,0 +1,8 @@
+name: housing_loss_env
+dependencies:
+  - pip
+  - python=3.8.10
+  - pip:
+    - cli/whl/GDAL-3.3.3-cp38-cp38-win_amd64.whl
+    - cli/whl/Fiona-1.8.20-cp38-cp38-win_amd64.whl
+    - -r requirements.txt
